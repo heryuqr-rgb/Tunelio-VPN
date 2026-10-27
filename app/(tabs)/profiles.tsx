@@ -4,7 +4,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import React, { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Card, C, DemoNotice, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
+import { Card, C, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
 import { useVpn, VpnProfile } from "@/lib/vpn-state";
 
 export default function ProfilesScreen() {
@@ -44,7 +44,6 @@ export default function ProfilesScreen() {
   };
 
   const imported = profiles.filter((profile) => profile.origin === "imported");
-  const examples = profiles.filter((profile) => profile.origin === "demo");
 
   return (
     <Page>
@@ -66,13 +65,6 @@ export default function ProfilesScreen() {
         </View>
       ) : null}
 
-      <SectionTitle title="Lokasi contoh" action={<Text style={styles.count}>{examples.length} PROFIL</Text>} />
-      <View style={{ gap: 9 }}>
-        {examples.map((profile) => (
-          <ProfileCard key={profile.id} profile={profile} selected={profile.id === selectedProfileId} onSelect={() => selectProfile(profile.id)} />
-        ))}
-      </View>
-
       {imported.length ? (
         <>
           <SectionTitle title="Konfigurasi lokal" action={<Text style={styles.count}>{imported.length} IMPOR</Text>} />
@@ -85,7 +77,7 @@ export default function ProfilesScreen() {
         </>
       ) : null}
 
-      <DemoNotice compact />
+      {!imported.length ? <Card><Text style={styles.emptyProfiles}>Belum ada konfigurasi. Impor file JSON sing-box untuk menambahkan profil.</Text></Card> : null}
       <View style={styles.bottomSpace} />
     </Page>
   );
@@ -146,6 +138,7 @@ const styles = StyleSheet.create({
   removeText: { color: C.red, fontSize: 10, fontWeight: "700" },
   reimportHint: { color: "#A37A3E", fontSize: 9, marginTop: 2 },
   storageNote: { color: C.muted, fontSize: 10, lineHeight: 15, marginTop: -7 },
+  emptyProfiles: { color: C.muted, fontSize: 11, lineHeight: 17 },
   bottomSpace: { height: 4 },
   pressed: { opacity: 0.78 },
 });
