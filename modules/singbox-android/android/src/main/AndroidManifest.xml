@@ -9,7 +9,6 @@
       android:name="expo.modules.singbox.SingBoxPermissionActivity"
       android:exported="false"
       android:excludeFromRecents="true"
-      android:noHistory="true"
       android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     <service
       android:name="expo.modules.singbox.SingBoxVpnService"
