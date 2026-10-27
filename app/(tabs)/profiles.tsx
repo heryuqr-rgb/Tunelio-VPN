@@ -47,7 +47,7 @@ export default function ProfilesScreen() {
 
   return (
     <Page>
-      <PageTitle eyebrow="Rute koneksi" title="Pilih profil." subtitle="Pilih lokasi demo atau baca konfigurasi sing-box dari perangkat." />
+      <PageTitle eyebrow="Rute koneksi" title="Pilih profil." subtitle="Impor konfigurasi sing-box dari perangkat untuk menambahkan profil." />
 
       <Pressable onPress={chooseConfig} disabled={busy} style={({ pressed }) => [styles.importButton, pressed && styles.pressed, busy && { opacity: 0.7 }]}>
         <View style={styles.importIcon}><Ionicons name="document-text-outline" size={22} color={C.lime} /></View>
