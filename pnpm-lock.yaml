@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      tunelio-singbox-android:
+        specifier: file:modules/singbox-android
+        version: link:modules/singbox-android
       '@expo/metro-runtime':
         specifier: ~57.0.16
         version: 57.0.16(@expo/log-box@57.0.4)(expo@57.0.24)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.28.5)(@react-native/metro-config@0.86.3(@babel/core@7.28.5))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
