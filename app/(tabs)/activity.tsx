@@ -56,7 +56,6 @@ export default function ActivityScreen() {
         )) : <Text style={styles.emptyLog}>Belum ada aktivitas. Interaksi berikutnya akan muncul di sini.</Text>}
       </Card>
 
-      </View>
     </Page>
   );
 }
