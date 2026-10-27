@@ -1,5 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Platform } from "react-native";
+import { EventEmitter, requireOptionalNativeModule } from "expo-modules-core";
+
+type NativeVpnApi = { connect: (configJson: string) => Promise<{ status: string }>; disconnect: () => Promise<void>; getSnapshot: () => { status?: string; message?: string } };
+const nativeVpn = Platform.OS === "android" ? requireOptionalNativeModule<NativeVpnApi>("TunelioSingBox") : null;
+const nativeVpnEvents = nativeVpn ? new EventEmitter(nativeVpn as never) : null;
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "failed";
 type LogTone = "neutral" | "success" | "warning" | "danger";
@@ -120,6 +126,23 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, [status]);
 
+  useEffect(() => {
+    if (!nativeVpnEvents) return;
+    const statusSub = nativeVpnEvents.addListener("onVpnStatus", (event: { status?: string; message?: string }) => {
+      const next = event?.status;
+      if (next === "connected") setStatus("connected");
+      else if (next === "connecting" || next === "awaiting_permission") setStatus("connecting");
+      else if (next === "failed" || next === "error") setStatus("failed");
+      else if (next === "disconnected" || next === "stopped") setStatus("disconnected");
+      if (event?.message) recordEvent("Status VPN", event.message, next === "connected" ? "success" : next === "failed" ? "danger" : "neutral");
+      if (next !== "connected") setElapsedSeconds(0);
+    });
+    const logSub = nativeVpnEvents.addListener("onVpnLog", (event: { message?: string; level?: string }) => {
+      if (event?.message) recordEvent("Log VPN", event.message, /error|fatal/i.test(event.level ?? "") ? "danger" : "neutral");
+    });
+    return () => { statusSub.remove(); logSub.remove(); };
+  }, [recordEvent]);
+
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
@@ -128,15 +151,45 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
 
   const connectOrDisconnect = useCallback(() => {
     if (status === "connected" || status === "connecting") {
-      setStatus("disconnected");
-      setElapsedSeconds(0);
-      recordEvent("Koneksi dihentikan", "Belum ada sesi VPN aktif.", "neutral");
+      if (!nativeVpn) {
+        setStatus("disconnected");
+        setElapsedSeconds(0);
+        recordEvent("VPN terputus", "Modul VPN native tidak tersedia pada build ini.", "warning");
+        return;
+      }
+      void nativeVpn.disconnect().then(() => {
+        setStatus("disconnected");
+        setElapsedSeconds(0);
+        recordEvent("VPN diputus", "Permintaan putus dikirim ke layanan VPN Android.", "neutral");
+      }).catch((error) => {
+        setStatus("failed");
+        recordEvent("Gagal memutus VPN", String(error), "danger");
+      });
       return;
     }
-    setStatus("failed");
+    if (!selectedProfile.rawConfig) {
+      setStatus("failed");
+      setElapsedSeconds(0);
+      recordEvent("Konfigurasi perlu diimpor ulang", "Profil tersimpan hanya menyimpan ringkasan. Impor ulang file JSON sebelum menyambungkan.", "warning");
+      return;
+    }
+    if (!nativeVpn) {
+      setStatus("failed");
+      setElapsedSeconds(0);
+      recordEvent("Modul VPN tidak tersedia", "Build Android ini tidak memuat modul TunelioSingBox. Periksa autolinking dan native build.", "danger");
+      return;
+    }
+    setStatus("connecting");
     setElapsedSeconds(0);
-    recordEvent("VPN belum siap", "Integrasi UI dengan modul VPN native belum selesai. Tidak ada koneksi simulasi yang dibuat.", "warning");
-  }, [recordEvent, status]);
+    recordEvent("Memulai VPN", "Memvalidasi konfigurasi dan meminta izin VPN Android.", "neutral");
+    void nativeVpn.connect(selectedProfile.rawConfig).then((result) => {
+      recordEvent("Izin VPN diperlukan", "Setujui dialog koneksi VPN Android untuk melanjutkan.", "warning");
+      if (result?.status !== "awaiting_permission") setStatus("connecting");
+    }).catch((error) => {
+      setStatus("failed");
+      recordEvent("Koneksi gagal", String(error instanceof Error ? error.message : error), "danger");
+    });
+  }, [recordEvent, selectedProfile, status]);
 
   const selectProfile = useCallback((id: string) => {
     const profile = profiles.find((item) => item.id === id);
