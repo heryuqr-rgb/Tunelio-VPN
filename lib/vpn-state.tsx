@@ -48,12 +48,7 @@ type VpnContextValue = {
   recordEvent: (title: string, detail: string, tone?: LogTone) => void;
 };
 
-const BASE_PROFILES: VpnProfile[] = [
-  { id: "sg-04", name: "Singapura", code: "SG", endpoint: "SG-04 · Asia Pasifik", protocol: "VLESS", latency: "28 ms", origin: "demo" },
-  { id: "jp-02", name: "Tokyo", code: "JP", endpoint: "JP-02 · Asia Timur", protocol: "VMess", latency: "46 ms", origin: "demo" },
-  { id: "nl-01", name: "Amsterdam", code: "NL", endpoint: "NL-01 · Eropa Barat", protocol: "Trojan", latency: "168 ms", origin: "demo" },
-  { id: "de-03", name: "Frankfurt", code: "DE", endpoint: "DE-03 · Eropa Tengah", protocol: "Shadowsocks", latency: "174 ms", origin: "demo" },
-];
+const EMPTY_PROFILE: VpnProfile = { id: "", name: "Belum ada profil", code: "—", endpoint: "Impor konfigurasi sing-box", protocol: "—", latency: "—", origin: "imported" };
 
 const STORAGE_KEY = "tunelio.preferences.v1";
 const PROFILES_KEY = "tunelio.profiles.v1";
@@ -67,12 +62,9 @@ function clockNow() {
 
 export function VpnProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [profiles, setProfiles] = useState<VpnProfile[]>(BASE_PROFILES);
-  const [selectedProfileId, setSelectedProfileId] = useState(BASE_PROFILES[0].id);
-  const [events, setEvents] = useState<VpnEvent[]>([
-    { id: "startup", time: clockNow(), title: "Tunelio siap", detail: "Mode pratinjau · tunnel sing-box belum terpasang", tone: "warning" },
-    { id: "profile", time: clockNow(), title: "Profil contoh dimuat", detail: "SG-04 · endpoint demo", tone: "neutral" },
-  ]);
+  const [profiles, setProfiles] = useState<VpnProfile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState("");
+  const [events, setEvents] = useState<VpnEvent[]>([]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [hydrated, setHydrated] = useState(false);
@@ -97,7 +89,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
         if (storedProfiles) {
           const custom = JSON.parse(storedProfiles) as VpnProfile[];
           const normalized = custom.map((profile) => ({ ...profile, rawConfig: undefined, configLoaded: false }));
-          setProfiles([...BASE_PROFILES, ...normalized]);
+          setProfiles(normalized);
         }
         if (storedEvents) setEvents(JSON.parse(storedEvents));
       } catch {
@@ -129,31 +121,19 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
-  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? BASE_PROFILES[0];
+  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? EMPTY_PROFILE;
 
   const connectOrDisconnect = useCallback(() => {
-    if (status === "connecting") {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = null;
-      setStatus("disconnected");
-      recordEvent("Proses dibatalkan", "Simulasi koneksi dihentikan oleh pengguna.", "neutral");
-      return;
-    }
-    if (status === "connected") {
+    if (status === "connected" || status === "connecting") {
       setStatus("disconnected");
       setElapsedSeconds(0);
-      recordEvent("Sesi simulasi berakhir", "Tidak ada tunnel VPN aktif pada build pratinjau ini.", "neutral");
+      recordEvent("Koneksi dihentikan", "Belum ada sesi VPN aktif.", "neutral");
       return;
     }
-    setStatus("connecting");
+    setStatus("failed");
     setElapsedSeconds(0);
-    recordEvent("Menghubungkan (simulasi)", `${selectedProfile.code} · ${selectedProfile.name}`, "warning");
-    timerRef.current = setTimeout(() => {
-      setStatus("connected");
-      timerRef.current = null;
-      recordEvent("Simulasi tersambung", "Status demo aktif; lalu lintas perangkat belum melewati sing-box.", "success");
-    }, 900);
-  }, [recordEvent, selectedProfile, status]);
+    recordEvent("VPN belum siap", "Integrasi UI dengan modul VPN native belum selesai. Tidak ada koneksi simulasi yang dibuat.", "warning");
+  }, [recordEvent, status]);
 
   const selectProfile = useCallback((id: string) => {
     const profile = profiles.find((item) => item.id === id);
@@ -210,7 +190,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     const wasSelected = selectedProfileId === id;
     setProfiles((current) => current.filter((item) => item.id !== id));
     if (wasSelected) {
-      setSelectedProfileId(BASE_PROFILES[0].id);
+      setSelectedProfileId("");
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
       setStatus("disconnected");
@@ -229,7 +209,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     timerRef.current = null;
     setStatus("failed");
     setElapsedSeconds(0);
-    recordEvent("Uji gagal (simulasi)", "Belum ada core native yang menginisiasi VPNService Android.", "danger");
+    recordEvent("VPN belum siap", "Modul VPN native belum terhubung ke antarmuka.", "warning");
   }, [recordEvent]);
 
   const resetDemo = useCallback(() => {
@@ -237,7 +217,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     timerRef.current = null;
     setStatus("disconnected");
     setElapsedSeconds(0);
-    recordEvent("Status direset", "Mode demo kembali ke keadaan terputus.", "neutral");
+    recordEvent("Status direset", "Status lokal kembali terputus.", "neutral");
   }, [recordEvent]);
 
   const clearEvents = useCallback(() => {
