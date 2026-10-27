@@ -2,18 +2,18 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Card, C, DemoNotice, IconTile, Page, PageTitle, SectionTitle } from "@/components/vpn-ui";
+import { Card, C, IconTile, Page, PageTitle, SectionTitle } from "@/components/vpn-ui";
 import { useVpn } from "@/lib/vpn-state";
 
 const STATUS_TEXT = {
   disconnected: "Terputus",
-  connecting: "Menyiapkan simulasi",
-  connected: "Simulasi aktif",
-  failed: "Gagal (demo)",
+  connecting: "Menghubungkan",
+  connected: "Terhubung",
+  failed: "VPN belum siap",
 } as const;
 
 export default function ActivityScreen() {
-  const { status, events, simulateFailure, resetDemo, clearEvents } = useVpn();
+  const { status, events, clearEvents } = useVpn();
   const issue = status === "failed";
   return (
     <Page>
@@ -29,10 +29,8 @@ export default function ActivityScreen() {
           <View style={[styles.statusOrb, issue && { backgroundColor: C.red }]} />
         </View>
         <View style={styles.divider} />
-        <Text style={styles.statusDesc}>Core sing-box belum tertaut ke VPNService Android. Karena itu pemeriksaan jaringan dan handshake server belum dijalankan.</Text>
+        <Text style={styles.statusDesc}>Status ditampilkan dari aplikasi. Tunnel VPN dan handshake server belum dikonfirmasi oleh modul native.</Text>
       </Card>
-
-      <DemoNotice />
 
       <Card style={styles.checkCard}>
         <SectionTitle title="Pemeriksaan lokal" />
@@ -58,14 +56,6 @@ export default function ActivityScreen() {
         )) : <Text style={styles.emptyLog}>Belum ada aktivitas. Interaksi berikutnya akan muncul di sini.</Text>}
       </Card>
 
-      <View style={styles.actionBlock}>
-        <Text style={styles.actionHint}>Untuk melihat semua status UI:</Text>
-        <View style={styles.actionRow}>
-          <Pressable onPress={simulateFailure} style={({ pressed }) => [styles.testButton, pressed && { opacity: 0.8 }]}>
-            <Ionicons name="warning-outline" size={15} color="#8D554E" /><Text style={styles.testButtonText}>Uji status gagal</Text>
-          </Pressable>
-          {issue ? <Pressable onPress={resetDemo} style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.8 }]}><Text style={styles.resetText}>Reset</Text></Pressable> : null}
-        </View>
       </View>
     </Page>
   );
