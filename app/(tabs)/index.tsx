@@ -3,25 +3,23 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { BrandHeader, C, DemoNotice, Page } from "@/components/vpn-ui";
-import { formatDuration, useVpn } from "@/lib/vpn-state";
+import { BrandHeader, C, Page } from "@/components/vpn-ui";
+import { useVpn } from "@/lib/vpn-state";
 
 const STATUS_TEXT = {
   disconnected: "Belum terhubung",
   connecting: "Menghubungkan…",
-  connected: "Sesi simulasi aktif",
+  connected: "Terhubung",
   failed: "Koneksi gagal",
 } as const;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { status, selectedProfile, elapsedSeconds, connectOrDisconnect } = useVpn();
+  const { status, selectedProfile, connectOrDisconnect } = useVpn();
   const isConnected = status === "connected";
   const isPending = status === "connecting";
   const isFailed = status === "failed";
   const statusTint = isFailed ? C.red : isConnected ? C.lime : isPending ? C.warning : "#A4B1AA";
-  const down = isConnected ? `${(elapsedSeconds * 0.038).toFixed(1)} MB` : "0.0 MB";
-  const up = isConnected ? `${(elapsedSeconds * 0.012).toFixed(1)} MB` : "0.0 MB";
 
   return (
     <Page contentStyle={styles.page}>
@@ -36,7 +34,7 @@ export default function HomeScreen() {
         <View style={styles.heroTop}>
           <View style={styles.liveTag}>
             <View style={[styles.liveDot, { backgroundColor: statusTint }]} />
-            <Text style={styles.liveLabel}>{isConnected ? "SIMULASI AKTIF" : isPending ? "MENYIAPKAN DEMO" : isFailed ? "PERLU PERHATIAN" : "SIAP DIGUNAKAN"}</Text>
+            <Text style={styles.liveLabel}>{isConnected ? "TERHUBUNG" : isPending ? "MENGHUBUNGKAN" : isFailed ? "PERLU PERHATIAN" : "SIAP DIGUNAKAN"}</Text>
           </View>
           <Ionicons name="ellipsis-horizontal" size={20} color="#9BAFA5" />
         </View>
@@ -46,7 +44,7 @@ export default function HomeScreen() {
           <View style={[styles.orbitMiddle, isConnected && styles.orbitMiddleActive]} />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={isConnected ? "Putuskan koneksi simulasi" : isPending ? "Batalkan simulasi koneksi" : "Mulai simulasi koneksi"}
+            accessibilityLabel={isConnected ? "Putuskan koneksi" : isPending ? "Batalkan koneksi" : "Mulai koneksi"}
             onPress={connectOrDisconnect}
             style={({ pressed }) => [styles.powerButton, isConnected && styles.powerButtonActive, isFailed && styles.powerButtonFailed, pressed && styles.pressed]}
           >
@@ -56,41 +54,22 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.statusTitle}>{STATUS_TEXT[status]}</Text>
-        <Text style={styles.statusSub}>{isConnected ? "Proteksi yang terlihat · bukan tunnel sungguhan" : isPending ? "Ini hanya transisi demo, tanpa koneksi jaringan." : isFailed ? "Tidak ada VPN aktif. Buka diagnostik untuk detail." : "Satu ketukan untuk melihat alur aplikasi."}</Text>
-      </View>
-
-      <View style={styles.demoStrip}>
-        <Ionicons name="information-circle-outline" size={17} color="#846B3B" />
-        <Text style={styles.demoStripText}>Pratinjau interaktif · core sing-box native belum terpasang</Text>
+        <Text style={styles.statusSub}>{isConnected ? "Status sesi aplikasi." : isPending ? "Menunggu layanan VPN." : isFailed ? "VPN belum siap. Buka diagnostik untuk detail." : "Impor konfigurasi sing-box untuk memulai."}</Text>
       </View>
 
       <Pressable onPress={() => router.push("/profiles")} style={({ pressed }) => [styles.serverCard, pressed && styles.pressed]}>
         <View style={styles.serverLeft}>
           <View style={styles.serverBadge}><Text style={styles.serverCode}>{selectedProfile.code}</Text></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.serverCaption}>PROFIL PILIHAN</Text>
+            <Text style={styles.serverCaption}>PROFIL AKTIF</Text>
             <Text style={styles.serverName} numberOfLines={1}>{selectedProfile.name}</Text>
             <Text style={styles.serverDetails} numberOfLines={1}>{selectedProfile.endpoint}</Text>
           </View>
         </View>
-        <View style={styles.changeLink}><Text style={styles.changeText}>Ubah</Text><Ionicons name="chevron-forward" size={15} color={C.limeDark} /></View>
+        <View style={styles.changeLink}><Text style={styles.changeText}>Impor</Text><Ionicons name="chevron-forward" size={15} color={C.limeDark} /></View>
       </Pressable>
 
-      <View style={styles.statsCard}>
-        <View style={styles.statsHeading}>
-          <Text style={styles.statsTitle}>Ringkasan sesi</Text>
-          <View style={styles.demoMini}><View style={styles.demoMiniDot} /><Text style={styles.demoMiniText}>DEMO</Text></View>
-        </View>
-        <View style={styles.statsRow}>
-          <Stat label="DURASI" value={formatDuration(elapsedSeconds)} icon="time-outline" />
-          <View style={styles.statDivider} />
-          <Stat label="UNDUH" value={down} icon="arrow-down-outline" tint={C.mint} />
-          <View style={styles.statDivider} />
-          <Stat label="UNGGAH" value={up} icon="arrow-up-outline" tint="#D1DC85" />
-        </View>
-      </View>
 
-      <DemoNotice compact />
     </Page>
   );
 }
