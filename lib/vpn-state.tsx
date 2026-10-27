@@ -91,7 +91,10 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
           const normalized = custom.map((profile) => ({ ...profile, rawConfig: undefined, configLoaded: false }));
           setProfiles(normalized);
         }
-        if (storedEvents) setEvents(JSON.parse(storedEvents));
+        if (storedEvents) {
+          const saved = JSON.parse(storedEvents) as VpnEvent[];
+          setEvents(saved.filter((event) => !/demo|simulasi|pratinjau|profil contoh/i.test(`${event.title} ${event.detail}`)));
+        }
       } catch {
         if (active) recordEvent("Penyimpanan lokal", "Preferensi awal digunakan.", "warning");
       } finally {
