@@ -4,7 +4,7 @@ import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BrandHeader, C, Page } from "@/components/vpn-ui";
-import { useVpn } from "@/lib/vpn-state";
+import { formatBytes, useVpn } from "@/lib/vpn-state";
 
 const STATUS_TEXT = {
   disconnected: "Belum terhubung",
@@ -15,7 +15,7 @@ const STATUS_TEXT = {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { status, selectedProfile, connectOrDisconnect } = useVpn();
+  const { status, selectedProfile, connectOrDisconnect, uplinkBytes, downlinkBytes, trafficAvailable } = useVpn();
   const isConnected = status === "connected";
   const isPending = status === "connecting";
   const isFailed = status === "failed";
