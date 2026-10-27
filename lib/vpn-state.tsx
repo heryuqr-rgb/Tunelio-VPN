@@ -62,6 +62,33 @@ const EVENTS_KEY = "tunelio.events.v1";
 const DEFAULT_PREFERENCES: Preferences = { autoConnect: false, reconnectOnNetworkChange: true };
 const VpnContext = createContext<VpnContextValue | null>(null);
 
+function prepareTunnelConfig(rawConfig: string): string {
+  const config = JSON.parse(rawConfig) as Record<string, any>;
+  if (!Array.isArray(config.outbounds) || config.outbounds.length === 0) {
+    throw new Error("Konfigurasi harus memiliki outbound sing-box.");
+  }
+  const inbounds = Array.isArray(config.inbounds) ? config.inbounds : [];
+  const hasTun = inbounds.some((item: any) => item?.type === "tun" && item?.auto_route === true);
+  if (!hasTun) {
+    inbounds.push({
+      type: "tun",
+      tag: "tun-in",
+      interface_name: "tun0",
+      address: ["172.19.0.1/30", "fdfe:dcba:9876::1/126"],
+      mtu: 9000,
+      auto_route: true,
+      strict_route: true,
+      stack: "system"
+    });
+  }
+  config.inbounds = inbounds;
+  config.route = {
+    ...(config.route && typeof config.route === "object" ? config.route : {}),
+    auto_detect_interface: true
+  };
+  return JSON.stringify(config);
+}
+
 function clockNow() {
   return new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
@@ -182,7 +209,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     setStatus("connecting");
     setElapsedSeconds(0);
     recordEvent("Memulai VPN", "Memvalidasi konfigurasi dan meminta izin VPN Android.", "neutral");
-    void nativeVpn.connect(selectedProfile.rawConfig).then((result) => {
+    let tunnelConfig: string;\n    try {\n      tunnelConfig = prepareTunnelConfig(selectedProfile.rawConfig);\n    } catch (error) {\n      setStatus("failed");\n      recordEvent("Konfigurasi tidak valid", String(error instanceof Error ? error.message : error), "danger");\n      return;\n    }\n    void nativeVpn.connect(tunnelConfig).then((result) => {
       recordEvent("Izin VPN diperlukan", "Setujui dialog koneksi VPN Android untuk melanjutkan.", "warning");
       if (result?.status !== "awaiting_permission") setStatus("connecting");
     }).catch((error) => {
