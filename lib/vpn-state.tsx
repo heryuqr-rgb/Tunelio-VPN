@@ -43,6 +43,9 @@ type VpnContextValue = {
   events: VpnEvent[];
   preferences: Preferences;
   elapsedSeconds: number;
+  uplinkBytes: number;
+  downlinkBytes: number;
+  trafficAvailable: boolean;
   connectOrDisconnect: () => void;
   selectProfile: (id: string) => void;
   importConfig: (fileName: string, rawConfig: string) => { ok: boolean; message: string };
@@ -100,6 +103,9 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<VpnEvent[]>([]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [uplinkBytes, setUplinkBytes] = useState(0);
+  const [downlinkBytes, setDownlinkBytes] = useState(0);
+  const [trafficAvailable, setTrafficAvailable] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -164,10 +170,10 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       if (event?.message) recordEvent("Status VPN", event.message, next === "connected" ? "success" : next === "failed" ? "danger" : "neutral");
       if (next !== "connected") setElapsedSeconds(0);
     });
-    const logSub = nativeVpnEvents.addListener("onVpnLog", (event: { message?: string; level?: string }) => {
+    const trafficSub = nativeVpnEvents.addListener("onVpnTraffic", (event: { uplinkBytes?: number; downlinkBytes?: number; trafficAvailable?: boolean }) => {\n      setUplinkBytes(Number(event?.uplinkBytes ?? 0));\n      setDownlinkBytes(Number(event?.downlinkBytes ?? 0));\n      setTrafficAvailable(Boolean(event?.trafficAvailable));\n    });\n    const logSub = nativeVpnEvents.addListener("onVpnLog", (event: { message?: string; level?: string }) => {
       if (event?.message) recordEvent("Log VPN", event.message, /error|fatal/i.test(event.level ?? "") ? "danger" : "neutral");
     });
-    return () => { statusSub.remove(); logSub.remove(); };
+    return () => { statusSub.remove(); trafficSub.remove(); logSub.remove(); };
   }, [recordEvent]);
 
   useEffect(() => () => {
