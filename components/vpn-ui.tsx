@@ -33,7 +33,7 @@ export function Page({ children, contentStyle, scroll = true }: { children: Reac
   );
 }
 
-export function BrandHeader({ rightLabel = "PRATINJAU" }: { rightLabel?: string }) {
+export function BrandHeader({ rightLabel = "VPN LOKAL" }: { rightLabel?: string }) {
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
@@ -65,20 +65,6 @@ export function PageTitle({ eyebrow, title, subtitle }: { eyebrow: string; title
 
 export function SectionTitle({ title, action }: { title: string; action?: React.ReactNode }) {
   return <View style={styles.sectionRow}><Text style={styles.sectionTitle}>{title}</Text>{action}</View>;
-}
-
-export function DemoNotice({ compact = false }: { compact?: boolean }) {
-  return (
-    <View style={[styles.notice, compact && styles.noticeCompact]}>
-      <Ionicons name="information-circle" size={18} color={C.limeDark} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.noticeTitle}>Mode pratinjau</Text>
-        <Text style={styles.noticeText}>
-          {compact ? "Tunnel native sing-box belum aktif." : "Status dan statistik adalah simulasi. Build ini belum mengalihkan lalu lintas perangkat ke VPN."}
-        </Text>
-      </View>
-    </View>
-  );
 }
 
 export function Pill({ label, background = C.paleMint, color = C.limeDark, style }: { label: string; background?: string; color?: string; style?: StyleProp<ViewStyle> }) {
