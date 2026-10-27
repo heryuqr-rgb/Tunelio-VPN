@@ -314,10 +314,10 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<VpnContextValue>(() => ({
-    status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds,
+    status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds, uplinkBytes, downlinkBytes, trafficAvailable,
     connectOrDisconnect, selectProfile, importConfig, removeProfile, setPreference,
     simulateFailure, resetDemo, clearEvents, recordEvent,
-  }), [status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds,
+  }), [status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds, uplinkBytes, downlinkBytes, trafficAvailable,
     connectOrDisconnect, selectProfile, importConfig, removeProfile, setPreference,
     simulateFailure, resetDemo, clearEvents, recordEvent]);
 
@@ -337,4 +337,12 @@ export function formatDuration(seconds: number) {
   return hours > 0
     ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
     : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+export function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, index);
+  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 }
