@@ -79,22 +79,37 @@ jobs:
       - name: Build pinned sing-box libbox AAR
         run: bash scripts/build-libbox-android.sh
 
-      - name: Build standalone release APK
+      - name: Build debug and standalone release APKs
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
-          APK="app/build/outputs/apk/release/app-release.apk"
-          test -s "$APK"
-          echo "APK size:"
-          du -h "$APK"
-          echo "Checking embedded React Native bundle..."
-          unzip -l "$APK" | grep -E 'assets/index\.android\.bundle' || {
-            echo "ERROR: JavaScript bundle is missing from APK."
+          ./gradlew --no-daemon assembleDebug assembleRelease
+
+          DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
+          RELEASE_APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$DEBUG_APK"
+          test -s "$RELEASE_APK"
+
+          echo "Debug APK size:"
+          du -h "$DEBUG_APK"
+          echo "Standalone release APK size:"
+          du -h "$RELEASE_APK"
+
+          echo "Checking embedded JavaScript bundle in release APK..."
+          unzip -l "$RELEASE_APK" | grep -E 'assets/index\.android\.bundle' || {
+            echo "ERROR: JavaScript bundle is missing from release APK."
             exit 1
           }
 
-      - name: Upload standalone APK
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-vpn-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload standalone release APK
         uses: actions/upload-artifact@v4
         with:
           name: tunelio-vpn-standalone-apk
