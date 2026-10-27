@@ -81,8 +81,18 @@ jobs:
 
       - name: Build debug and standalone release APKs
         working-directory: android
+        env:
+          GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=1g"
         run: |
           chmod +x gradlew
+          # D8 ran out of Java heap while merging the release dex archives.
+          # Give Gradle and its D8 workers a larger heap and limit parallel workers.
+          if grep -q '^org.gradle.jvmargs=' gradle.properties; then
+            sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8/' gradle.properties
+          else
+            echo 'org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' >> gradle.properties
+          fi
+          echo 'org.gradle.workers.max=2' >> gradle.properties
           ./gradlew --no-daemon assembleDebug assembleRelease
 
           DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
