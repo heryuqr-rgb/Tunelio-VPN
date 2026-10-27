@@ -71,8 +71,11 @@ function prepareTunnelConfig(rawConfig: string): string {
     throw new Error("Konfigurasi harus memiliki outbound sing-box.");
   }
   const inbounds = Array.isArray(config.inbounds) ? config.inbounds : [];
-  const hasTun = inbounds.some((item: any) => item?.type === "tun" && item?.auto_route === true);
-  if (!hasTun) {
+  const tunInbound = inbounds.find((item: any) => item?.type === "tun");
+  if (tunInbound) {
+    tunInbound.auto_route = true;
+    if (tunInbound.strict_route === undefined) tunInbound.strict_route = true;
+  } else {
     inbounds.push({
       type: "tun",
       tag: "tun-in",
@@ -170,7 +173,12 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       if (event?.message) recordEvent("Status VPN", event.message, next === "connected" ? "success" : next === "failed" ? "danger" : "neutral");
       if (next !== "connected") setElapsedSeconds(0);
     });
-    const trafficSub = nativeVpnEvents.addListener("onVpnTraffic", (event: { uplinkBytes?: number; downlinkBytes?: number; trafficAvailable?: boolean }) => {\n      setUplinkBytes(Number(event?.uplinkBytes ?? 0));\n      setDownlinkBytes(Number(event?.downlinkBytes ?? 0));\n      setTrafficAvailable(Boolean(event?.trafficAvailable));\n    });\n    const logSub = nativeVpnEvents.addListener("onVpnLog", (event: { message?: string; level?: string }) => {
+    const trafficSub = nativeVpnEvents.addListener("onVpnTraffic", (event: { uplinkBytes?: number; downlinkBytes?: number; trafficAvailable?: boolean }) => {
+      setUplinkBytes(Number(event?.uplinkBytes ?? 0));
+      setDownlinkBytes(Number(event?.downlinkBytes ?? 0));
+      setTrafficAvailable(Boolean(event?.trafficAvailable));
+    });
+    const logSub = nativeVpnEvents.addListener("onVpnLog", (event: { message?: string; level?: string }) => {
       if (event?.message) recordEvent("Log VPN", event.message, /error|fatal/i.test(event.level ?? "") ? "danger" : "neutral");
     });
     return () => { statusSub.remove(); trafficSub.remove(); logSub.remove(); };
@@ -215,7 +223,15 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     setStatus("connecting");
     setElapsedSeconds(0);
     recordEvent("Memulai VPN", "Memvalidasi konfigurasi dan meminta izin VPN Android.", "neutral");
-    let tunnelConfig: string;\n    try {\n      tunnelConfig = prepareTunnelConfig(selectedProfile.rawConfig);\n    } catch (error) {\n      setStatus("failed");\n      recordEvent("Konfigurasi tidak valid", String(error instanceof Error ? error.message : error), "danger");\n      return;\n    }\n    void nativeVpn.connect(tunnelConfig).then((result) => {
+    let tunnelConfig: string;
+    try {
+      tunnelConfig = prepareTunnelConfig(selectedProfile.rawConfig);
+    } catch (error) {
+      setStatus("failed");
+      recordEvent("Konfigurasi tidak valid", String(error instanceof Error ? error.message : error), "danger");
+      return;
+    }
+    void nativeVpn.connect(tunnelConfig).then((result) => {
       recordEvent("Izin VPN diperlukan", "Setujui dialog koneksi VPN Android untuk melanjutkan.", "warning");
       if (result?.status !== "awaiting_permission") setStatus("connecting");
     }).catch((error) => {
