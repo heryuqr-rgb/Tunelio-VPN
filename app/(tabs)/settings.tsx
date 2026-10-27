@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
-import { Card, C, DemoNotice, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
+import { Card, C, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
 import { useVpn } from "@/lib/vpn-state";
 
 export default function SettingsScreen() {
@@ -17,12 +17,12 @@ export default function SettingsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.coreLabel}>MESIN VPN</Text>
             <Text style={styles.coreTitle}>sing-box</Text>
-            <Text style={styles.coreSub}>Integrasi native belum tersedia</Text>
+            <Text style={styles.coreSub}>Menunggu integrasi VPN native</Text>
           </View>
           <Pill label="BELUM AKTIF" background="#314237" color="#D8C08A" />
         </View>
         <Divider />
-        <Text style={styles.coreDesc}>Antarmuka ini sudah menyiapkan alur profil dan status. Untuk tunnel Android sungguhan, proyek masih memerlukan libbox, VPNService, izin sistem, serta pengujian build native pada perangkat.</Text>
+        <Text style={styles.coreDesc}>Core sing-box dan layanan VPN Android harus terhubung serta diuji sebelum koneksi dapat digunakan.</Text>
       </Card>
 
       <Text style={styles.groupTitle}>PERILAKU KONEKSI</Text>
@@ -30,7 +30,7 @@ export default function SettingsScreen() {
         <PreferenceRow
           icon="flash-outline"
           title="Sambung otomatis"
-          detail="Mulai saat aplikasi dibuka (siap untuk integrasi native)"
+          detail="Pengaturan tersimpan; koneksi otomatis belum tersedia"
           value={preferences.autoConnect}
           onChange={(value) => setPreference("autoConnect", value)}
         />
@@ -38,7 +38,7 @@ export default function SettingsScreen() {
         <PreferenceRow
           icon="refresh-outline"
           title="Sambung ulang saat jaringan berubah"
-          detail="Preferensi disimpan lokal; belum mengendalikan tunnel."
+          detail="Pengaturan tersimpan; penyambungan ulang belum aktif."
           value={preferences.reconnectOnNetworkChange}
           onChange={(value) => setPreference("reconnectOnNetworkChange", value)}
         />
@@ -50,13 +50,12 @@ export default function SettingsScreen() {
         <Divider />
         <InfoRow icon="document-lock-outline" title="File konfigurasi" detail="Dibaca di perangkat. Isi JSON tidak dikirim ke server; perlu impor ulang setelah aplikasi ditutup." />
         <Divider />
-        <InfoRow icon="information-circle-outline" title="Data koneksi" detail="Lokasi, ping, durasi, dan trafik contoh hanya data tampilan pratinjau." last />
+        <InfoRow icon="information-circle-outline" title="Data koneksi" detail="Statistik hanya ditampilkan jika tersedia dari layanan VPN native." last />
       </Card>
 
       <Pressable onPress={() => recordEvent("Tentang Tunelio", "Versi pratinjau UI · belum terhubung ke tunnel native.", "neutral")} style={({ pressed }) => [styles.aboutRow, pressed && { opacity: 0.75 }]}>
         <Text style={styles.aboutText}>Tunelio VPN</Text><Text style={styles.version}>PREVIEW 0.1</Text><Ionicons name="chevron-forward" size={15} color={C.muted} />
       </Pressable>
-      <DemoNotice compact />
     </Page>
   );
 }
