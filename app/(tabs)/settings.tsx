@@ -4,9 +4,11 @@ import { StyleSheet, Switch, Text, View } from "react-native";
 
 import { Card, C, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
 import { useVpn } from "@/lib/vpn-state";
+import { useThemeContext } from "@/lib/theme-provider";
 
 export default function SettingsScreen() {
   const { preferences, setPreference, nativeAvailable, status, trafficAvailable } = useVpn();
+  const { colorScheme, setColorScheme } = useThemeContext();
   const serviceConnected = nativeAvailable && status === "connected";
   return (
     <Page>
@@ -34,6 +36,17 @@ export default function SettingsScreen() {
           detail="OFF secara default. Aktifkan sementara untuk mencari error koneksi."
           value={preferences.diagnosticLogs}
           onChange={(value) => setPreference("diagnosticLogs", value)}
+        />
+      </Card>
+
+      <Text style={styles.groupTitle}>TAMPILAN</Text>
+      <Card style={styles.preferenceCard}>
+        <PreferenceRow
+          icon="moon-outline"
+          title="Mode gelap"
+          detail="Aktifkan tampilan gelap dan simpan pilihan ini untuk pembukaan berikutnya."
+          value={colorScheme === "dark"}
+          onChange={(value) => setColorScheme(value ? "dark" : "light")}
         />
       </Card>
 
