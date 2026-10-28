@@ -98,6 +98,17 @@ jobs:
           ./gradlew --no-daemon assembleDebug assembleRelease
           test -s app/build/outputs/apk/debug/app-debug.apk
           test -s app/build/outputs/apk/release/app-release.apk
+          echo "Release APK size:"
+          du -h app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK ZIP structure"
+          unzip -t app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK signature and alignment"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$ZIPALIGN" -c -v 4 app/build/outputs/apk/release/app-release.apk
           unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'assets/index\.android\.bundle'
 
       - name: Upload debug APK
