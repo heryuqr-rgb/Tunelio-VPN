@@ -8,7 +8,7 @@ import { Card, C, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-u
 import { useVpn, VpnProfile } from "@/lib/vpn-state";
 
 export default function ProfilesScreen() {
-  const { profiles, selectedProfileId, selectProfile, importConfig, removeProfile, nativeAvailable } = useVpn();
+  const { profiles, selectedProfileId, selectProfile, importConfig, removeProfile } = useVpn();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageOk, setMessageOk] = useState(true);
