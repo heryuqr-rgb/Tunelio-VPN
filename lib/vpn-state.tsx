@@ -138,6 +138,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
             return { ...profile, rawConfig, configLoaded: Boolean(rawConfig) };
           });
           setProfiles([...BASE_PROFILES, ...normalized]);
+          if (normalized.length > 0) setSelectedProfileId(normalized[0].id);
         }
         if (storedEvents) setEvents(JSON.parse(storedEvents));
       } catch {
