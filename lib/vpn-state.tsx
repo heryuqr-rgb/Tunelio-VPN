@@ -65,12 +65,8 @@ type VpnContextValue = {
   recordEvent: (title: string, detail: string, tone?: LogTone) => void;
 };
 
-const BASE_PROFILES: VpnProfile[] = [
-  { id: "sg-04", name: "Singapura", code: "SG", endpoint: "SG-04 · Asia Pasifik", protocol: "VLESS", latency: "28 ms", origin: "demo" },
-  { id: "jp-02", name: "Tokyo", code: "JP", endpoint: "JP-02 · Asia Timur", protocol: "VMess", latency: "46 ms", origin: "demo" },
-  { id: "nl-01", name: "Amsterdam", code: "NL", endpoint: "NL-01 · Eropa Barat", protocol: "Trojan", latency: "168 ms", origin: "demo" },
-  { id: "de-03", name: "Frankfurt", code: "DE", endpoint: "DE-03 · Eropa Tengah", protocol: "Shadowsocks", latency: "174 ms", origin: "demo" },
-];
+const BASE_PROFILES: VpnProfile[] = [];
+const EMPTY_PROFILE: VpnProfile = { id: "empty", name: "Belum ada profil", code: "—", endpoint: "Impor konfigurasi JSON", protocol: "—", latency: "—", origin: "demo" };
 
 const STORAGE_KEY = "tunelio.preferences.v1";
 const PROFILES_KEY = "tunelio.profiles.v1";
@@ -106,10 +102,9 @@ function toneForNativeStatus(status: NativeVpnSnapshot["status"]): LogTone {
 export function VpnProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [profiles, setProfiles] = useState<VpnProfile[]>(BASE_PROFILES);
-  const [selectedProfileId, setSelectedProfileId] = useState(BASE_PROFILES[0].id);
+  const [selectedProfileId, setSelectedProfileId] = useState(EMPTY_PROFILE.id);
   const [events, setEvents] = useState<VpnEvent[]>([
-    { id: "startup", time: clockNow(), title: "Tunelio siap", detail: isAndroidSingBoxAvailable ? "Modul sing-box Android tersedia; impor konfigurasi TUN milikmu." : "Pratinjau UI · core VPN native belum tersedia di build ini.", tone: isAndroidSingBoxAvailable ? "neutral" : "warning" },
-    { id: "profile", time: clockNow(), title: "Profil contoh dimuat", detail: "Endpoint contoh hanya untuk tampilan dan tidak dapat membuat tunnel.", tone: "neutral" },
+    { id: "startup", time: clockNow(), title: "Tunelio siap", detail: isAndroidSingBoxAvailable ? "Impor konfigurasi sing-box dengan inbound TUN untuk memulai." : "Pratinjau UI · VPN sungguhan memerlukan build Android native.", tone: isAndroidSingBoxAvailable ? "neutral" : "warning" },
   ]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -220,7 +215,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     };
   }, [recordEvent, preferences.diagnosticLogs]);
 
-  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? BASE_PROFILES[0];
+  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? EMPTY_PROFILE;
 
   const connectOrDisconnect = useCallback(() => {
     if (isAndroidSingBoxAvailable) {
@@ -347,7 +342,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       if (isAndroidSingBoxAvailable && (status === "connected" || status === "connecting" || status === "awaiting_permission")) {
         void disconnectSingBox().catch(() => undefined);
       }
-      setSelectedProfileId(BASE_PROFILES[0].id);
+      setSelectedProfileId(EMPTY_PROFILE.id);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
       setStatus("disconnected");
