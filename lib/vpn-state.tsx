@@ -36,11 +36,7 @@ export type VpnEvent = {
   tone: LogTone;
 };
 
-type Preferences = {
-  autoConnect: boolean;
-  reconnectOnNetworkChange: boolean;
-  diagnosticLogs: boolean;
-};
+type Preferences = { diagnosticLogs: boolean };
 
 type VpnContextValue = {
   status: ConnectionStatus;
@@ -70,7 +66,7 @@ const EMPTY_PROFILE: VpnProfile = { id: "empty", name: "Belum ada profil", code:
 
 const STORAGE_KEY = "tunelio.preferences.v1";
 const PROFILES_KEY = "tunelio.profiles.v1";
-const DEFAULT_PREFERENCES: Preferences = { autoConnect: false, reconnectOnNetworkChange: true, diagnosticLogs: false };
+const DEFAULT_PREFERENCES: Preferences = { diagnosticLogs: false };
 const VpnContext = createContext<VpnContextValue | null>(null);
 
 function clockNow() {
@@ -355,7 +351,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     const detail = isAndroidSingBoxAvailable
       ? "Disimpan lokal; layanan Android belum menerapkan kebijakan ini secara otomatis."
       : "Disimpan lokal; belum mengendalikan koneksi pratinjau.";
-    recordEvent("Preferensi diperbarui", `${key === "autoConnect" ? "Sambung otomatis" : key === "reconnectOnNetworkChange" ? "Koneksi ulang saat jaringan berubah" : "Log diagnostik"} · ${detail}`, "neutral");
+    recordEvent("Preferensi diperbarui", `Log diagnostik · ${detail}`, "neutral");
   }, [recordEvent]);
 
   const simulateFailure = useCallback(() => {
