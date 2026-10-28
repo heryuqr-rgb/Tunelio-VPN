@@ -70,7 +70,6 @@ const EMPTY_PROFILE: VpnProfile = { id: "empty", name: "Belum ada profil", code:
 
 const STORAGE_KEY = "tunelio.preferences.v1";
 const PROFILES_KEY = "tunelio.profiles.v1";
-const EVENTS_KEY = "tunelio.events.v1";
 const DEFAULT_PREFERENCES: Preferences = { autoConnect: false, reconnectOnNetworkChange: true, diagnosticLogs: false };
 const VpnContext = createContext<VpnContextValue | null>(null);
 
@@ -117,17 +116,16 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
 
   const recordEvent = useCallback((title: string, detail: string, tone: LogTone = "neutral") => {
     const next: VpnEvent = { id: `${Date.now()}-${Math.random()}`, time: clockNow(), title, detail, tone };
-    setEvents((current) => [next, ...current].slice(0, 30));
+    setEvents((current) => [next, ...current].slice(0, 20));
   }, []);
 
   useEffect(() => {
     let active = true;
     void (async () => {
       try {
-        const [storedPreferences, storedProfiles, storedEvents] = await Promise.all([
+        const [storedPreferences, storedProfiles] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY),
           AsyncStorage.getItem(PROFILES_KEY),
-          AsyncStorage.getItem(EVENTS_KEY),
         ]);
         if (!active) return;
         if (storedPreferences) setPreferences({ ...DEFAULT_PREFERENCES, ...JSON.parse(storedPreferences) });
@@ -140,7 +138,6 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
           setProfiles([...BASE_PROFILES, ...normalized]);
           if (normalized.length > 0) setSelectedProfileId(normalized[0].id);
         }
-        if (storedEvents) setEvents(JSON.parse(storedEvents));
       } catch {
         if (active) recordEvent("Penyimpanan lokal", "Preferensi awal digunakan.", "warning");
       } finally {
@@ -156,9 +153,8 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     void AsyncStorage.multiSet([
       [STORAGE_KEY, JSON.stringify(preferences)],
       [PROFILES_KEY, JSON.stringify(custom)],
-      [EVENTS_KEY, JSON.stringify(events)],
     ]).catch(() => undefined);
-  }, [hydrated, preferences, profiles, events]);
+  }, [hydrated, preferences, profiles]);
 
   useEffect(() => {
     if (status !== "connected") return;
