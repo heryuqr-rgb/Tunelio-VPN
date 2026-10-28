@@ -8,6 +8,7 @@ import android.os.Build
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
+import java.util.UUID
 
 class TunelioSingBoxModule : Module() {
     private var receiver: BroadcastReceiver? = null
@@ -79,21 +80,41 @@ class TunelioSingBoxModule : Module() {
             val context = appContext.reactContext ?: throw IllegalStateException("React context Android belum tersedia.")
             require(configJson.length <= 2_000_000) { "File konfigurasi lebih besar dari batas 2 MB." }
             SingBoxBridge.validateTunnelConfig(configJson)
-            val configFile = File(context.noBackupFilesDir, "tunelio-singbox.json")
-            val pendingFile = File(context.noBackupFilesDir, "tunelio-singbox.json.pending")
-            pendingFile.writeText(configJson, Charsets.UTF_8)
-            check(pendingFile.renameTo(configFile)) { "Konfigurasi lokal tidak dapat disimpan." }
-            SingBoxBridge.emitStatus(context, "awaiting_permission", "Menunggu persetujuan VPN Android.")
+            val requestId = UUID.randomUUID().toString()
+            val configFile = File(context.noBackupFilesDir, "tunelio-singbox-$requestId.json")
+            val pendingFile = File(context.noBackupFilesDir, "tunelio-singbox-$requestId.json.pending")
+            try {
+                pendingFile.writeText(configJson, Charsets.UTF_8)
+                check(pendingFile.renameTo(configFile)) { "Konfigurasi lokal tidak dapat disimpan." }
+            } catch (error: Exception) {
+                pendingFile.delete()
+                configFile.delete()
+                throw error
+            }
             val permissionActivity = Intent(context, SingBoxPermissionActivity::class.java)
                 .putExtra(SingBoxBridge.EXTRA_CONFIG_PATH, configFile.absolutePath)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(permissionActivity)
+            try {
+                SingBoxBridge.emitStatus(context, "awaiting_permission", "Menunggu persetujuan VPN Android.")
+                context.startActivity(permissionActivity)
+            } catch (error: Exception) {
+                configFile.delete()
+                pendingFile.delete()
+                val message = error.message ?: "Activity persetujuan VPN Android tidak dapat dibuka."
+                SingBoxBridge.emitStatus(context, "failed", message)
+                throw error
+            }
             mapOf("status" to "awaiting_permission")
         }
 
         AsyncFunction("disconnect") {
             val context = appContext.reactContext ?: throw IllegalStateException("React context Android belum tersedia.")
-            context.stopService(Intent(context, SingBoxVpnService::class.java))
+            val stopIntent = Intent(context, SingBoxVpnService::class.java).setAction(SingBoxBridge.ACTION_STOP)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(stopIntent)
+            } else {
+                context.startService(stopIntent)
+            }
             SingBoxBridge.emitStatus(context, "disconnected", "VPN diputuskan oleh pengguna.")
         }
 

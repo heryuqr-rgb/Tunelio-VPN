@@ -2,6 +2,6 @@
   "name": "tunelio-singbox-android",
   "version": "1.0.0",
   "private": true,
-  "main": "index.js",
-  "types": "index.d.ts"
+  "description": "Local Expo module for the Android sing-box/libbox VPN service",
+  "main": "index.js"
 }

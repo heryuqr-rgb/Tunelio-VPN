@@ -100,7 +100,11 @@ internal object SingBoxBridge {
 
     private fun redact(message: String): String {
         if (message.isBlank()) return message
-        val credential = Regex("(?i)(password|passwd|uuid|token|secret|private[_-]?key|authorization)(\\s*[=:]\\s*)(\\\"[^\\\"]*\\\"|'[^']*'|[^,;\\s}]+)")
-        return credential.replace(message) { match -> "${match.groupValues[1]}${match.groupValues[2]}••••" }
+        val keyedCredential = Regex("(?i)([\\\"]?(?:password|passwd|uuid|token|secret|private[_-]?key|authorization|bearer)[\\\"]?\\s*[=:]\\s*)(?:\\\"(?:\\\\.|[^\\\"])*\\\"|'(?:\\\\.|[^'])*'|[^,;\\s}]+)")
+        val uriUserInfo = Regex("(?i)([a-z][a-z0-9+.-]*://)[^/@\\s]+@")
+        val bearerToken = Regex("(?i)(\\bBearer\\s+)[A-Za-z0-9._~+/-]+=*")
+        val keyed = keyedCredential.replace(message) { match -> "${match.groupValues[1]}••••" }
+        val uri = uriUserInfo.replace(keyed) { match -> "${match.groupValues[1]}••••@" }
+        return bearerToken.replace(uri) { match -> "${match.groupValues[1]}••••" }
     }
 }

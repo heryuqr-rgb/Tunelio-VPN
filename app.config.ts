@@ -141,6 +141,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    "./plugins/with-standalone-debug-bundle",
   ],
   experiments: {
     typedRoutes: true,

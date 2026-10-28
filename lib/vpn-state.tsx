@@ -1,13 +1,19 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
-import { EventEmitter, requireOptionalNativeModule } from "expo-modules-core";
 
-type NativeVpnApi = { connect: (configJson: string) => Promise<{ status: string }>; disconnect: () => Promise<void>; getSnapshot: () => { status?: string; message?: string } };
-const nativeVpn = Platform.OS === "android" ? requireOptionalNativeModule<NativeVpnApi>("TunelioSingBox") : null;
-const nativeVpnEvents = nativeVpn ? new EventEmitter(nativeVpn as never) : null;
+import {
+  connectSingBox,
+  disconnectSingBox,
+  getSingBoxSnapshot,
+  isAndroidSingBoxAvailable,
+  onSingBoxLog,
+  onSingBoxStatus,
+  onSingBoxTraffic,
+  type NativeVpnSnapshot,
+} from "@/lib/singbox-native";
 
-type ConnectionStatus = "disconnected" | "connecting" | "connected" | "failed";
+type ConnectionStatus = "disconnected" | "awaiting_permission" | "connecting" | "connected" | "failed";
 type LogTone = "neutral" | "success" | "warning" | "danger";
 
 export type VpnProfile = {
@@ -46,6 +52,7 @@ type VpnContextValue = {
   uplinkBytes: number;
   downlinkBytes: number;
   trafficAvailable: boolean;
+  nativeAvailable: boolean;
   connectOrDisconnect: () => void;
   selectProfile: (id: string) => void;
   importConfig: (fileName: string, rawConfig: string) => { ok: boolean; message: string };
@@ -57,7 +64,12 @@ type VpnContextValue = {
   recordEvent: (title: string, detail: string, tone?: LogTone) => void;
 };
 
-const EMPTY_PROFILE: VpnProfile = { id: "", name: "Belum ada profil", code: "—", endpoint: "Impor konfigurasi sing-box", protocol: "—", latency: "—", origin: "imported" };
+const BASE_PROFILES: VpnProfile[] = [
+  { id: "sg-04", name: "Singapura", code: "SG", endpoint: "SG-04 · Asia Pasifik", protocol: "VLESS", latency: "28 ms", origin: "demo" },
+  { id: "jp-02", name: "Tokyo", code: "JP", endpoint: "JP-02 · Asia Timur", protocol: "VMess", latency: "46 ms", origin: "demo" },
+  { id: "nl-01", name: "Amsterdam", code: "NL", endpoint: "NL-01 · Eropa Barat", protocol: "Trojan", latency: "168 ms", origin: "demo" },
+  { id: "de-03", name: "Frankfurt", code: "DE", endpoint: "DE-03 · Eropa Tengah", protocol: "Shadowsocks", latency: "174 ms", origin: "demo" },
+];
 
 const STORAGE_KEY = "tunelio.preferences.v1";
 const PROFILES_KEY = "tunelio.profiles.v1";
@@ -65,45 +77,39 @@ const EVENTS_KEY = "tunelio.events.v1";
 const DEFAULT_PREFERENCES: Preferences = { autoConnect: false, reconnectOnNetworkChange: true };
 const VpnContext = createContext<VpnContextValue | null>(null);
 
-function prepareTunnelConfig(rawConfig: string): string {
-  const config = JSON.parse(rawConfig) as Record<string, any>;
-  if (!Array.isArray(config.outbounds) || config.outbounds.length === 0) {
-    throw new Error("Konfigurasi harus memiliki outbound sing-box.");
-  }
-  const inbounds = Array.isArray(config.inbounds) ? config.inbounds : [];
-  const tunInbound = inbounds.find((item: any) => item?.type === "tun");
-  if (tunInbound) {
-    tunInbound.auto_route = true;
-    if (tunInbound.strict_route === undefined) tunInbound.strict_route = true;
-  } else {
-    inbounds.push({
-      type: "tun",
-      tag: "tun-in",
-      interface_name: "tun0",
-      address: ["172.19.0.1/30", "fdfe:dcba:9876::1/126"],
-      mtu: 9000,
-      auto_route: true,
-      strict_route: true,
-      stack: "system"
-    });
-  }
-  config.inbounds = inbounds;
-  config.route = {
-    ...(config.route && typeof config.route === "object" ? config.route : {}),
-    auto_detect_interface: true
-  };
-  return JSON.stringify(config);
-}
-
 function clockNow() {
   return new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
+function asErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Operasi VPN gagal. Periksa izin Android dan konfigurasi sing-box.";
+}
+
+function titleForNativeStatus(status: NativeVpnSnapshot["status"]) {
+  switch (status) {
+    case "awaiting_permission": return "Menunggu izin VPN Android";
+    case "connecting": return "Core sing-box memulai";
+    case "connected": return "Tunnel sing-box aktif";
+    case "failed": return "Core sing-box gagal";
+    default: return "Tunnel sing-box dihentikan";
+  }
+}
+
+function toneForNativeStatus(status: NativeVpnSnapshot["status"]): LogTone {
+  if (status === "connected") return "success";
+  if (status === "failed") return "danger";
+  if (status === "awaiting_permission" || status === "connecting") return "warning";
+  return "neutral";
+}
+
 export function VpnProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const [profiles, setProfiles] = useState<VpnProfile[]>([]);
-  const [selectedProfileId, setSelectedProfileId] = useState("");
-  const [events, setEvents] = useState<VpnEvent[]>([]);
+  const [profiles, setProfiles] = useState<VpnProfile[]>(BASE_PROFILES);
+  const [selectedProfileId, setSelectedProfileId] = useState(BASE_PROFILES[0].id);
+  const [events, setEvents] = useState<VpnEvent[]>([
+    { id: "startup", time: clockNow(), title: "Tunelio siap", detail: isAndroidSingBoxAvailable ? "Modul sing-box Android tersedia; impor konfigurasi TUN milikmu." : "Pratinjau UI · core VPN native belum tersedia di build ini.", tone: isAndroidSingBoxAvailable ? "neutral" : "warning" },
+    { id: "profile", time: clockNow(), title: "Profil contoh dimuat", detail: "Endpoint contoh hanya untuk tampilan dan tidak dapat membuat tunnel.", tone: "neutral" },
+  ]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [uplinkBytes, setUplinkBytes] = useState(0);
@@ -111,6 +117,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
   const [trafficAvailable, setTrafficAvailable] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastNativeEventRef = useRef("");
 
   const recordEvent = useCallback((title: string, detail: string, tone: LogTone = "neutral") => {
     const next: VpnEvent = { id: `${Date.now()}-${Math.random()}`, time: clockNow(), title, detail, tone };
@@ -130,13 +137,13 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
         if (storedPreferences) setPreferences({ ...DEFAULT_PREFERENCES, ...JSON.parse(storedPreferences) });
         if (storedProfiles) {
           const custom = JSON.parse(storedProfiles) as VpnProfile[];
-          const normalized = custom.map((profile) => ({ ...profile, rawConfig: undefined, configLoaded: false }));
-          setProfiles(normalized);
+          const normalized = custom.map((profile) => {
+            const rawConfig = typeof profile.rawConfig === "string" ? profile.rawConfig : undefined;
+            return { ...profile, rawConfig, configLoaded: Boolean(rawConfig) };
+          });
+          setProfiles([...BASE_PROFILES, ...normalized]);
         }
-        if (storedEvents) {
-          const saved = JSON.parse(storedEvents) as VpnEvent[];
-          setEvents(saved.filter((event) => !/demo|simulasi|pratinjau|profil contoh/i.test(`${event.title} ${event.detail}`)));
-        }
+        if (storedEvents) setEvents(JSON.parse(storedEvents));
       } catch {
         if (active) recordEvent("Penyimpanan lokal", "Preferensi awal digunakan.", "warning");
       } finally {
@@ -148,7 +155,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    const custom = profiles.filter((profile) => profile.origin === "imported").map(({ rawConfig: _secret, configLoaded: _loaded, ...profile }) => ({ ...profile, configLoaded: false }));
+    const custom = profiles.filter((profile) => profile.origin === "imported");
     void AsyncStorage.multiSet([
       [STORAGE_KEY, JSON.stringify(preferences)],
       [PROFILES_KEY, JSON.stringify(custom)],
@@ -162,92 +169,127 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, [status]);
 
-  useEffect(() => {
-    if (!nativeVpnEvents) return;
-    const statusSub = nativeVpnEvents.addListener("onVpnStatus", (event: { status?: string; message?: string }) => {
-      const next = event?.status;
-      if (next === "connected") setStatus("connected");
-      else if (next === "connecting" || next === "awaiting_permission") setStatus("connecting");
-      else if (next === "failed" || next === "error") setStatus("failed");
-      else if (next === "disconnected" || next === "stopped") setStatus("disconnected");
-      if (event?.message) recordEvent("Status VPN", event.message, next === "connected" ? "success" : next === "failed" ? "danger" : "neutral");
-      if (next !== "connected") setElapsedSeconds(0);
-    });
-    const trafficSub = nativeVpnEvents.addListener("onVpnTraffic", (event: { uplinkBytes?: number; downlinkBytes?: number; trafficAvailable?: boolean }) => {
-      setUplinkBytes(Number(event?.uplinkBytes ?? 0));
-      setDownlinkBytes(Number(event?.downlinkBytes ?? 0));
-      setTrafficAvailable(Boolean(event?.trafficAvailable));
-    });
-    const logSub = nativeVpnEvents.addListener("onVpnLog", (event: { message?: string; level?: string }) => {
-      if (event?.message) recordEvent("Log VPN", event.message, /error|fatal/i.test(event.level ?? "") ? "danger" : "neutral");
-    });
-    return () => { statusSub.remove(); trafficSub.remove(); logSub.remove(); };
-  }, [recordEvent]);
-
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
-  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? EMPTY_PROFILE;
+  useEffect(() => {
+    if (!isAndroidSingBoxAvailable) return;
+    let active = true;
+    const applySnapshot = (snapshot: NativeVpnSnapshot, record: boolean) => {
+      if (!active) return;
+      setStatus(snapshot.status);
+      setUplinkBytes(snapshot.uplinkBytes);
+      setDownlinkBytes(snapshot.downlinkBytes);
+      setTrafficAvailable(snapshot.trafficAvailable);
+      if (snapshot.status === "connected" && snapshot.startedAt > 0) {
+        setElapsedSeconds(Math.max(0, Math.floor((Date.now() - snapshot.startedAt) / 1000)));
+      } else if (snapshot.status !== "connected") {
+        setElapsedSeconds(0);
+      }
+      const eventKey = `${snapshot.status}|${snapshot.message}`;
+      if (record && snapshot.message && eventKey !== lastNativeEventRef.current) {
+        lastNativeEventRef.current = eventKey;
+        recordEvent(titleForNativeStatus(snapshot.status), snapshot.message, toneForNativeStatus(snapshot.status));
+      }
+    };
+
+    const statusSubscription = onSingBoxStatus((snapshot) => applySnapshot(snapshot, true));
+    const trafficSubscription = onSingBoxTraffic((traffic) => {
+      if (!active) return;
+      setUplinkBytes(traffic.uplinkBytes);
+      setDownlinkBytes(traffic.downlinkBytes);
+      setTrafficAvailable(traffic.trafficAvailable);
+    });
+    const logSubscription = onSingBoxLog((entry) => {
+      if (!active || !entry.message.trim()) return;
+      const tone: LogTone = entry.level >= 4 ? "danger" : entry.level === 3 ? "warning" : "neutral";
+      recordEvent("sing-box · log", entry.message, tone);
+    });
+
+    void getSingBoxSnapshot()
+      .then((snapshot) => applySnapshot(snapshot, snapshot.status !== "disconnected" || Boolean(snapshot.message)))
+      .catch((error: unknown) => recordEvent("Status native tidak tersedia", asErrorMessage(error), "warning"));
+
+    return () => {
+      active = false;
+      statusSubscription?.remove();
+      trafficSubscription?.remove();
+      logSubscription?.remove();
+    };
+  }, [recordEvent]);
+
+  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? BASE_PROFILES[0];
 
   const connectOrDisconnect = useCallback(() => {
-    if (status === "connected" || status === "connecting") {
-      if (!nativeVpn) {
-        setStatus("disconnected");
-        setElapsedSeconds(0);
-        recordEvent("VPN terputus", "Modul VPN native tidak tersedia pada build ini.", "warning");
+    if (isAndroidSingBoxAvailable) {
+      if (status === "connected" || status === "connecting" || status === "awaiting_permission") {
+        void disconnectSingBox().catch((error: unknown) => {
+          setStatus("failed");
+          recordEvent("VPN gagal dihentikan", asErrorMessage(error), "danger");
+        });
         return;
       }
-      void nativeVpn.disconnect().then(() => {
-        setStatus("disconnected");
-        setElapsedSeconds(0);
-        recordEvent("VPN diputus", "Permintaan putus dikirim ke layanan VPN Android.", "neutral");
-      }).catch((error) => {
+      if (selectedProfile.origin !== "imported" || !selectedProfile.rawConfig) {
         setStatus("failed");
-        recordEvent("Gagal memutus VPN", String(error), "danger");
-      });
+        recordEvent("Konfigurasi diperlukan", "Impor konfigurasi sing-box milikmu dengan inbound TUN dan auto_route sebelum menghubungkan.", "warning");
+        return;
+      }
+      setStatus("awaiting_permission");
+      setElapsedSeconds(0);
+      setUplinkBytes(0);
+      setDownlinkBytes(0);
+      setTrafficAvailable(false);
+      recordEvent("Meminta izin VPN Android", "Tinjau dialog sistem Android sebelum trafik dialihkan melalui TUN.", "warning");
+      void connectSingBox(selectedProfile.rawConfig)
+        .then((result) => setStatus(result.status))
+        .catch((error: unknown) => {
+          setStatus("failed");
+          recordEvent("Koneksi native gagal", asErrorMessage(error), "danger");
+        });
       return;
     }
-    if (!selectedProfile.rawConfig) {
+
+    if (Platform.OS !== "web") {
       setStatus("failed");
-      setElapsedSeconds(0);
-      recordEvent("Konfigurasi perlu diimpor ulang", "Profil tersimpan hanya menyimpan ringkasan. Impor ulang file JSON sebelum menyambungkan.", "warning");
+      recordEvent("Build native belum tersedia", "VPN sungguhan memerlukan APK Android yang memasukkan modul sing-box; Expo Go tidak dapat memuat VpnService.", "danger");
       return;
     }
-    if (!nativeVpn) {
-      setStatus("failed");
+
+    if (status === "connecting") {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+      setStatus("disconnected");
+      recordEvent("Proses dibatalkan", "Transisi koneksi pratinjau dihentikan.", "neutral");
+      return;
+    }
+    if (status === "connected") {
+      setStatus("disconnected");
       setElapsedSeconds(0);
-      recordEvent("Modul VPN tidak tersedia", "Build Android ini tidak memuat modul TunelioSingBox. Periksa autolinking dan native build.", "danger");
+      recordEvent("Sesi simulasi berakhir", "Web Preview tidak memiliki tunnel VPN perangkat.", "neutral");
       return;
     }
     setStatus("connecting");
     setElapsedSeconds(0);
-    recordEvent("Memulai VPN", "Memvalidasi konfigurasi dan meminta izin VPN Android.", "neutral");
-    let tunnelConfig: string;
-    try {
-      tunnelConfig = prepareTunnelConfig(selectedProfile.rawConfig);
-    } catch (error) {
-      setStatus("failed");
-      recordEvent("Konfigurasi tidak valid", String(error instanceof Error ? error.message : error), "danger");
-      return;
-    }
-    void nativeVpn.connect(tunnelConfig).then((result) => {
-      recordEvent("Izin VPN diperlukan", "Setujui dialog koneksi VPN Android untuk melanjutkan.", "warning");
-      if (result?.status !== "awaiting_permission") setStatus("connecting");
-    }).catch((error) => {
-      setStatus("failed");
-      recordEvent("Koneksi gagal", String(error instanceof Error ? error.message : error), "danger");
-    });
+    recordEvent("Menghubungkan (simulasi Web)", `${selectedProfile.code} · ${selectedProfile.name}`, "warning");
+    timerRef.current = setTimeout(() => {
+      setStatus("connected");
+      timerRef.current = null;
+      recordEvent("Simulasi Web tersambung", "Tidak ada lalu lintas perangkat yang melewati VPN.", "success");
+    }, 900);
   }, [recordEvent, selectedProfile, status]);
 
   const selectProfile = useCallback((id: string) => {
     const profile = profiles.find((item) => item.id === id);
     if (!profile) return;
-    if (status === "connecting" || status === "connected") {
-      setStatus("disconnected");
+    if (status === "connecting" || status === "connected" || status === "awaiting_permission") {
+      if (isAndroidSingBoxAvailable) void disconnectSingBox().catch(() => undefined);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
+      setStatus("disconnected");
       setElapsedSeconds(0);
+      setUplinkBytes(0);
+      setDownlinkBytes(0);
     }
     setSelectedProfileId(id);
     recordEvent("Profil dipilih", `${profile.code} · ${profile.name}`, "neutral");
@@ -256,10 +298,10 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
   const importConfig = useCallback((fileName: string, rawConfig: string) => {
     try {
       const parsed: unknown = JSON.parse(rawConfig);
-      if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as { outbounds?: unknown }).outbounds)) {
-        return { ok: false, message: "Format belum dikenali. Impor file JSON dengan array outbounds sing-box." };
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray((parsed as { outbounds?: unknown }).outbounds)) {
+        return { ok: false, message: "Format belum dikenali. Impor file JSON sing-box dengan array outbounds." };
       }
-      const root = parsed as { outbounds: unknown[] };
+      const root = parsed as { outbounds: unknown[]; inbounds?: unknown };
       const eligible = root.outbounds.find((value): value is Record<string, unknown> => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return false;
         const outbound = value as Record<string, unknown>;
@@ -268,6 +310,12 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
           && (typeof outbound.server === "string" || typeof outbound.server_port === "number");
       });
       if (!eligible) return { ok: false, message: "File JSON terbaca, tetapi tidak ada outbound server yang bisa ditampilkan." };
+      const inbounds = Array.isArray(root.inbounds) ? root.inbounds : [];
+      const hasRoutedTun = inbounds.some((value) => value && typeof value === "object" && !Array.isArray(value)
+        && (value as Record<string, unknown>).type === "tun"
+        && (value as Record<string, unknown>).auto_route === true);
+      if (!hasRoutedTun) return { ok: false, message: "Tambahkan inbound type=tun dengan auto_route=true agar trafik perangkat dapat masuk ke VPN." };
+
       const baseName = fileName.replace(/\.[^.]+$/, "").trim();
       const profile: VpnProfile = {
         id: `import-${Date.now()}`,
@@ -282,8 +330,8 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       };
       setProfiles((current) => [...current, profile]);
       setSelectedProfileId(profile.id);
-      recordEvent("Konfigurasi dibaca", `${profile.name} · data tetap lokal di sesi ini`, "success");
-      return { ok: true, message: `${profile.name} berhasil dibaca. Kredensial tidak dikirim ke server.` };
+      recordEvent("Konfigurasi TUN dibaca", `${profile.name} · kredensial hanya dikirim ke modul VPN lokal saat tersambung`, "success");
+      return { ok: true, message: `${profile.name} siap. Konfigurasi disimpan di memori sesi dan tidak dikirim ke server.` };
     } catch {
       return { ok: false, message: "JSON tidak valid. Periksa file konfigurasi lalu coba lagi." };
     }
@@ -295,47 +343,62 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     const wasSelected = selectedProfileId === id;
     setProfiles((current) => current.filter((item) => item.id !== id));
     if (wasSelected) {
-      setSelectedProfileId("");
+      if (isAndroidSingBoxAvailable && (status === "connected" || status === "connecting" || status === "awaiting_permission")) {
+        void disconnectSingBox().catch(() => undefined);
+      }
+      setSelectedProfileId(BASE_PROFILES[0].id);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = null;
       setStatus("disconnected");
       setElapsedSeconds(0);
+      setUplinkBytes(0);
+      setDownlinkBytes(0);
     }
-    recordEvent("Profil impor dihapus", wasSelected ? `${profile.name} · sesi demo dihentikan` : profile.name, "neutral");
-  }, [profiles, recordEvent, selectedProfileId]);
+    recordEvent("Profil impor dihapus", wasSelected ? `${profile.name} · sesi dihentikan` : profile.name, "neutral");
+  }, [profiles, recordEvent, selectedProfileId, status]);
 
   const setPreference = useCallback((key: keyof Preferences, value: boolean) => {
     setPreferences((current) => ({ ...current, [key]: value }));
-    recordEvent("Preferensi diperbarui", key === "autoConnect" ? "Sambung otomatis" : "Koneksi ulang saat jaringan berubah", "neutral");
+    const detail = isAndroidSingBoxAvailable
+      ? "Disimpan lokal; layanan Android belum menerapkan kebijakan ini secara otomatis."
+      : "Disimpan lokal; belum mengendalikan koneksi pratinjau.";
+    recordEvent("Preferensi diperbarui", `${key === "autoConnect" ? "Sambung otomatis" : "Koneksi ulang saat jaringan berubah"} · ${detail}`, "neutral");
   }, [recordEvent]);
 
   const simulateFailure = useCallback(() => {
+    if (isAndroidSingBoxAvailable) {
+      recordEvent("Mode uji simulasi dinonaktifkan", "Status Android hanya berubah dari event VPNService/sing-box nyata.", "warning");
+      return;
+    }
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
     setStatus("failed");
     setElapsedSeconds(0);
-    recordEvent("VPN belum siap", "Modul VPN native belum terhubung ke antarmuka.", "warning");
+    recordEvent("Uji gagal (simulasi Web)", "Mode pratinjau tidak menginisiasi VPNService Android.", "danger");
   }, [recordEvent]);
 
   const resetDemo = useCallback(() => {
+    if (isAndroidSingBoxAvailable) {
+      void disconnectSingBox().catch((error: unknown) => recordEvent("VPN gagal dihentikan", asErrorMessage(error), "danger"));
+      return;
+    }
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
     setStatus("disconnected");
     setElapsedSeconds(0);
-    recordEvent("Status direset", "Status lokal kembali terputus.", "neutral");
+    recordEvent("Status direset", "Mode demo kembali ke keadaan terputus.", "neutral");
   }, [recordEvent]);
 
-  const clearEvents = useCallback(() => {
-    setEvents([]);
-  }, []);
+  const clearEvents = useCallback(() => setEvents([]), []);
 
   const value = useMemo<VpnContextValue>(() => ({
-    status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds, uplinkBytes, downlinkBytes, trafficAvailable,
+    status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds,
+    uplinkBytes, downlinkBytes, trafficAvailable, nativeAvailable: isAndroidSingBoxAvailable,
     connectOrDisconnect, selectProfile, importConfig, removeProfile, setPreference,
     simulateFailure, resetDemo, clearEvents, recordEvent,
-  }), [status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds, uplinkBytes, downlinkBytes, trafficAvailable,
-    connectOrDisconnect, selectProfile, importConfig, removeProfile, setPreference,
-    simulateFailure, resetDemo, clearEvents, recordEvent]);
+  }), [status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds,
+    uplinkBytes, downlinkBytes, trafficAvailable, connectOrDisconnect, selectProfile,
+    importConfig, removeProfile, setPreference, simulateFailure, resetDemo, clearEvents, recordEvent]);
 
   return <VpnContext.Provider value={value}>{children}</VpnContext.Provider>;
 }
@@ -357,8 +420,13 @@ export function formatDuration(seconds: number) {
 
 export function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, index);
-  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = -1;
+  do {
+    value /= 1024;
+    unitIndex += 1;
+  } while (value >= 1024 && unitIndex < units.length - 1);
+  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[unitIndex]}`;
 }

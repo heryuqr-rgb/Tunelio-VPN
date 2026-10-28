@@ -1,5 +1,6 @@
 package expo.modules.singbox
 
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.IpPrefix
 import android.net.Network
@@ -17,15 +18,13 @@ import io.nekohasekai.libbox.LocalDNSTransport
 import io.nekohasekai.libbox.NeighborUpdateListener
 import io.nekohasekai.libbox.NetworkInterface as LibboxNetworkInterface
 import io.nekohasekai.libbox.NetworkInterfaceIterator
-import io.nekohasekai.libbox.Notification
+import io.nekohasekai.libbox.Notification as LibboxNotification
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.PlatformUser
 import io.nekohasekai.libbox.ShellSession
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.TunOptions
 import io.nekohasekai.libbox.WIFIState
-import java.io.File
-import java.net.Inet6Address
 import java.net.InetSocketAddress
 import java.net.NetworkInterface as JavaNetworkInterface
 import java.util.Collections
@@ -36,20 +35,22 @@ internal class SingBoxPlatform(private val vpnService: VpnService) : PlatformInt
     private var activeListener: InterfaceUpdateListener? = null
 
     override fun localDNSTransport(): LocalDNSTransport? = null
+
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
+
     override fun autoDetectInterfaceControl(fd: Int) {
-        check(vpnService.protect(fd)) { "Android gagal mengecualikan socket core dari tunnel VPN." }
+        check(vpnService.protect(fd)) { "Android gagal mengecualikan socket transport dari tunnel VPN." }
     }
-    override fun useProcFS(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
 
     override fun openTun(options: TunOptions): Int {
+        check(VpnService.prepare(vpnService) == null) { "Izin VPN Android belum diberikan." }
         val builder = vpnService.Builder()
             .setSession("Tunelio · sing-box")
             .setMtu(options.mtu)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
 
-        addPrefixes(options.inet4Address, builder, isAddress = true)
-        addPrefixes(options.inet6Address, builder, isAddress = true)
+        addAddresses(options.inet4Address, builder)
+        addAddresses(options.inet6Address, builder)
 
         if (options.autoRoute) {
             if (options.dnsMode.value != Libbox.DNSModeDisabled) {
@@ -58,49 +59,64 @@ internal class SingBoxPlatform(private val vpnService: VpnService) : PlatformInt
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val ipv4Routes = options.inet4RouteAddress
-                val hasIpv4Routes = ipv4Routes.hasNext()
-                addPrefixes(ipv4Routes, builder, isAddress = false)
-                if (!hasIpv4Routes && options.inet4Address.hasNext()) builder.addRoute("0.0.0.0", 0)
+                if (ipv4Routes.hasNext()) addRoutes(ipv4Routes, builder)
+                else if (options.inet4Address.hasNext()) builder.addRoute("0.0.0.0", 0)
 
                 val ipv6Routes = options.inet6RouteAddress
-                val hasIpv6Routes = ipv6Routes.hasNext()
-                addPrefixes(ipv6Routes, builder, isAddress = false)
-                if (!hasIpv6Routes && options.inet6Address.hasNext()) builder.addRoute("::", 0)
+                if (ipv6Routes.hasNext()) addRoutes(ipv6Routes, builder)
+                else if (options.inet6Address.hasNext()) builder.addRoute("::", 0)
 
-                addExcludedPrefixes(options.inet4RouteExcludeAddress, builder)
-                addExcludedPrefixes(options.inet6RouteExcludeAddress, builder)
+                addExcludedRoutes(options.inet4RouteExcludeAddress, builder)
+                addExcludedRoutes(options.inet6RouteExcludeAddress, builder)
             } else {
-                addPrefixes(options.inet4RouteRange, builder, isAddress = false)
-                addPrefixes(options.inet6RouteRange, builder, isAddress = false)
+                addRoutes(options.inet4RouteRange, builder)
+                addRoutes(options.inet6RouteRange, builder)
             }
-
-            val included = options.includePackage
-            while (included.hasNext()) builder.addAllowedApplication(included.next())
-            val excluded = options.excludePackage
-            while (excluded.hasNext()) builder.addDisallowedApplication(excluded.next())
+            addApplications(options.includePackage, builder, allow = true)
+            addApplications(options.excludePackage, builder, allow = false)
         }
 
         val descriptor = builder.establish()
-            ?: error("Android tidak dapat membuat TUN: izin VPN belum diberikan atau sudah dicabut.")
+            ?: error("Android tidak dapat membentuk TUN. Izin VPN mungkin dicabut atau konfigurasi alamat tidak valid.")
         (vpnService as? SingBoxVpnService)?.setTunnelDescriptor(descriptor)
+            ?: run { descriptor.close(); error("Service VPN Tunelio tidak tersedia.") }
         return descriptor.fd
     }
 
-    private fun addPrefixes(iterator: io.nekohasekai.libbox.RoutePrefixIterator, builder: VpnService.Builder, isAddress: Boolean) {
+    private fun addAddresses(iterator: io.nekohasekai.libbox.RoutePrefixIterator, builder: VpnService.Builder) {
         while (iterator.hasNext()) {
-            val prefix = iterator.next()
-            if (isAddress) builder.addAddress(prefix.address(), prefix.prefix())
-            else builder.addRoute(prefix.address(), prefix.prefix())
+            val address = iterator.next()
+            builder.addAddress(address.address(), address.prefix())
         }
     }
 
-    private fun addExcludedPrefixes(iterator: io.nekohasekai.libbox.RoutePrefixIterator, builder: VpnService.Builder) {
+    private fun addRoutes(iterator: io.nekohasekai.libbox.RoutePrefixIterator, builder: VpnService.Builder) {
         while (iterator.hasNext()) {
-            val prefix = iterator.next()
-            val ipPrefix = IpPrefix(java.net.InetAddress.getByName(prefix.address()), prefix.prefix())
-            builder.excludeRoute(ipPrefix)
+            val route = iterator.next()
+            builder.addRoute(route.address(), route.prefix())
         }
     }
+
+    private fun addExcludedRoutes(iterator: io.nekohasekai.libbox.RoutePrefixIterator, builder: VpnService.Builder) {
+        while (iterator.hasNext()) {
+            val route = iterator.next()
+            val prefix = IpPrefix(java.net.InetAddress.getByName(route.address()), route.prefix())
+            builder.excludeRoute(prefix)
+        }
+    }
+
+    private fun addApplications(iterator: StringIterator, builder: VpnService.Builder, allow: Boolean) {
+        while (iterator.hasNext()) {
+            val packageName = iterator.next()
+            try {
+                if (allow) builder.addAllowedApplication(packageName) else builder.addDisallowedApplication(packageName)
+            } catch (error: PackageManager.NameNotFoundException) {
+                throw IllegalArgumentException("Paket aplikasi tidak ditemukan untuk aturan TUN.", error)
+            }
+        }
+    }
+
+    override fun useProcFS(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
 
     override fun findConnectionOwner(
         ipProtocol: Int,
@@ -120,14 +136,13 @@ internal class SingBoxPlatform(private val vpnService: VpnService) : PlatformInt
         return ConnectionOwner().apply {
             userId = uid
             userName = packages.firstOrNull() ?: ""
-            setAndroidPackageNames(StringArray(packages.iterator()))
+            setAndroidPackageNames(StringArray(packages))
         }
     }
 
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener) {
         activeListener = listener
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
-        if (networkCallback != null) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || networkCallback != null) return
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) = notifyDefaultNetwork(network)
             override fun onLost(network: Network) = notifyDefaultNetwork(connectivity.activeNetwork)
@@ -138,15 +153,103 @@ internal class SingBoxPlatform(private val vpnService: VpnService) : PlatformInt
         notifyDefaultNetwork(connectivity.activeNetwork)
     }
 
+    @Volatile private var lastPhysicalNetwork: Network? = null
+    @Volatile private var lastPhysicalInterfaceName: String? = null
+    private var lastNoPhysicalInterfaceLogAt = 0L
+    private var lastSelectedInterfaceLog = ""
+
     private fun notifyDefaultNetwork(network: Network?) {
         val listener = activeListener ?: return
-        val properties = network?.let { connectivity.getLinkProperties(it) }
-        val name = properties?.interfaceName.orEmpty()
-        val iface = if (name.isBlank()) null else runCatching { JavaNetworkInterface.getByName(name) }.getOrNull()
-        val capabilities = network?.let { connectivity.getNetworkCapabilities(it) }
-        val expensive = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == false
-        listener.updateDefaultInterface(name, iface?.index ?: 0, expensive, false)
+        val physicalNetwork = resolvePhysicalNetwork(network)
+        val properties = physicalNetwork?.let { runCatching { connectivity.getLinkProperties(it) }.getOrNull() }
+        var name = properties?.interfaceName.orEmpty()
+        var interfaceIndex = if (name.isBlank()) 0 else runCatching { JavaNetworkInterface.getByName(name)?.index ?: 0 }.getOrDefault(0)
+        var expensive = physicalNetwork?.let { current ->
+            runCatching { connectivity.getNetworkCapabilities(current)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == false }
+                .getOrDefault(false)
+        } ?: false
+
+        if (name.isBlank() || interfaceIndex <= 0) {
+            val fallback = availableInterfaces()
+                .firstOrNull { it.name == lastPhysicalInterfaceName }
+                ?: availableInterfaces().firstOrNull()
+            if (fallback != null) {
+                name = fallback.name
+                interfaceIndex = fallback.index
+                expensive = fallback.metered
+            } else {
+                // -1 is libbox's explicit "no default interface" value; index 0 leaves a stale default in place.
+                listener.updateDefaultInterface("", -1, false, false)
+                listener.updateNetworkPath("android:unavailable")
+                logMissingPhysicalInterface()
+                return
+            }
+        }
+
+        lastPhysicalInterfaceName = name
+        listener.updateDefaultInterface(name, interfaceIndex, expensive, false)
         listener.updateNetworkPath("android:$name")
+        val shouldLog = synchronized(this) {
+            if (lastSelectedInterfaceLog == name) false
+            else {
+                lastSelectedInterfaceLog = name
+                true
+            }
+        }
+        if (shouldLog) SingBoxBridge.emitLog(vpnService, 2, "Interface jaringan fisik Android: $name")
+    }
+
+    private fun resolvePhysicalNetwork(preferred: Network?): Network? {
+        if (preferred != null && isPhysicalNetworkCandidate(preferred)) {
+            lastPhysicalNetwork = preferred
+            return preferred
+        }
+        lastPhysicalNetwork?.takeIf { isPhysicalNetworkCandidate(it) }?.let { return it }
+        val candidates = runCatching { connectivity.allNetworks.toList() }
+            .getOrDefault(emptyList())
+            .filter { isPhysicalNetworkCandidate(it) }
+        val selected = candidates.firstOrNull { candidate ->
+            runCatching {
+                connectivity.getNetworkCapabilities(candidate)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+            }.getOrDefault(false)
+        } ?: candidates.firstOrNull()
+        lastPhysicalNetwork = selected
+        return selected
+    }
+
+    private fun availableInterfaces(): List<LibboxNetworkInterface> {
+        val iterator = getInterfaces()
+        val interfaces = mutableListOf<LibboxNetworkInterface>()
+        while (iterator.hasNext()) interfaces += iterator.next()
+        return interfaces
+    }
+
+    private fun logMissingPhysicalInterface() {
+        val now = System.currentTimeMillis()
+        val shouldLog = synchronized(this) {
+            if (now - lastNoPhysicalInterfaceLogAt < 15_000L) false
+            else {
+                lastNoPhysicalInterfaceLogAt = now
+                true
+            }
+        }
+        if (shouldLog) {
+            SingBoxBridge.emitLog(
+                vpnService,
+                3,
+                "Android belum menemukan interface fisik Wi-Fi/seluler/Ethernet; interface VPN tidak dipakai sebagai jalur luar.",
+            )
+        }
+    }
+
+    private fun isPhysicalNetworkCandidate(network: Network): Boolean {
+        val capabilities = runCatching { connectivity.getNetworkCapabilities(network) }.getOrNull() ?: return false
+        if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        ) return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener) {
@@ -158,50 +261,121 @@ internal class SingBoxPlatform(private val vpnService: VpnService) : PlatformInt
     override fun getInterfaces(): NetworkInterfaceIterator {
         val allInterfaces = runCatching { Collections.list(JavaNetworkInterface.getNetworkInterfaces()) }.getOrDefault(emptyList())
         val result = mutableListOf<LibboxNetworkInterface>()
-        for (network in connectivity.allNetworks) {
+        val networks = runCatching { connectivity.allNetworks.toList() }.getOrDefault(emptyList())
+        val networkTypeByName = mutableMapOf<String, Int>()
+        for (network in networks) {
             val properties = connectivity.getLinkProperties(network) ?: continue
             val capabilities = connectivity.getNetworkCapabilities(network) ?: continue
-            val javaInterface = allInterfaces.firstOrNull { it.name == properties.interfaceName } ?: continue
-            val item = LibboxNetworkInterface().apply {
-                name = javaInterface.name
-                index = javaInterface.index
-                mtu = runCatching { javaInterface.mtu }.getOrDefault(1500)
-                addresses = StringArray(javaInterface.interfaceAddresses.map { address ->
-                    val host = if (address.address is Inet6Address) {
-                        Inet6Address.getByAddress(address.address.address).hostAddress.substringBefore('%')
-                    } else address.address.hostAddress
-                    "$host/${address.networkPrefixLength}"
-                }.iterator())
-                dnsServer = StringArray(properties.dnsServers.mapNotNull { it.hostAddress }.iterator())
-                gateway = StringArray(properties.routes
+            if (!isPhysicalNetwork(capabilities)) continue
+            val interfaceName = properties.interfaceName.orEmpty()
+            if (interfaceName.isBlank()) continue
+            networkTypeByName[interfaceName] = interfaceType(capabilities)
+            val javaInterface = allInterfaces.firstOrNull { it.name == interfaceName } ?: continue
+            if (!isUsableInterface(javaInterface)) continue
+            result += makeInterface(
+                javaInterface,
+                interfaceType(capabilities),
+                properties.dnsServers.mapNotNull { it.hostAddress },
+                properties.routes
                     .filter { it.destination.prefixLength == 0 }
                     .mapNotNull { it.gateway?.hostAddress }
-                    .filter { it != "0.0.0.0" && it != "::" }
-                    .iterator())
-                type = when {
-                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> Libbox.InterfaceTypeWIFI
-                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Libbox.InterfaceTypeCellular
-                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Libbox.InterfaceTypeEthernet
-                    else -> Libbox.InterfaceTypeOther
-                }
-                var interfaceFlags = 0
-                if (javaInterface.isUp) interfaceFlags = interfaceFlags or OsConstants.IFF_UP or OsConstants.IFF_RUNNING
-                if (javaInterface.isLoopback) interfaceFlags = interfaceFlags or OsConstants.IFF_LOOPBACK
-                if (javaInterface.isPointToPoint) interfaceFlags = interfaceFlags or OsConstants.IFF_POINTOPOINT
-                if (javaInterface.supportsMulticast()) interfaceFlags = interfaceFlags or OsConstants.IFF_MULTICAST
-                flags = interfaceFlags
-                metered = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                    .filter { it != "0.0.0.0" && it != "::" },
+                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
+            )
+        }
+
+        if (result.isEmpty()) {
+            val vpnNames = networks.filter { network ->
+                runCatching { connectivity.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true }
+                    .getOrDefault(false)
+            }.mapNotNull { network -> runCatching { connectivity.getLinkProperties(network)?.interfaceName }.getOrNull() }.toSet()
+            val fallbackInterfaces = allInterfaces.filter { javaInterface ->
+                isUsableInterface(javaInterface) && javaInterface.name !in vpnNames && !isLikelyTunnelInterface(javaInterface.name)
+            }.sortedBy { if (it.name == lastPhysicalInterfaceName) 0 else 1 }
+            for (javaInterface in fallbackInterfaces) {
+                val type = networkTypeByName[javaInterface.name] ?: interfaceTypeFromName(javaInterface.name)
+                result += makeInterface(javaInterface, type, emptyList(), emptyList(), type == Libbox.InterfaceTypeCellular)
             }
-            result += item
+            if (result.isNotEmpty()) {
+                SingBoxBridge.emitLog(
+                    vpnService,
+                    2,
+                    "ConnectivityManager tidak memetakan jaringan fisik; memakai interface Android aktif: ${result.joinToString { it.name }}",
+                )
+            }
         }
         return InterfaceArray(result.iterator())
+    }
+
+    private fun isPhysicalNetwork(capabilities: NetworkCapabilities): Boolean {
+        if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        ) return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    private fun isUsableInterface(networkInterface: JavaNetworkInterface): Boolean = runCatching {
+        networkInterface.index > 0 && networkInterface.isUp && !networkInterface.isLoopback
+    }.getOrDefault(false)
+
+    private fun isLikelyTunnelInterface(name: String): Boolean =
+        name.startsWith("tun", ignoreCase = true) ||
+            name.startsWith("wg", ignoreCase = true) ||
+            name.startsWith("utun", ignoreCase = true) ||
+            name.startsWith("ipsec", ignoreCase = true) ||
+            name.startsWith("dummy", ignoreCase = true)
+
+    private fun interfaceType(capabilities: NetworkCapabilities): Int = when {
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> Libbox.InterfaceTypeWIFI
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Libbox.InterfaceTypeCellular
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Libbox.InterfaceTypeEthernet
+        else -> Libbox.InterfaceTypeOther
+    }
+
+    private fun interfaceTypeFromName(name: String): Int = when {
+        name.startsWith("wlan", ignoreCase = true) || name.startsWith("wifi", ignoreCase = true) -> Libbox.InterfaceTypeWIFI
+        name.startsWith("rmnet", ignoreCase = true) ||
+            name.startsWith("ccmni", ignoreCase = true) ||
+            name.startsWith("pdp", ignoreCase = true) ||
+            name.startsWith("wwan", ignoreCase = true) -> Libbox.InterfaceTypeCellular
+        name.startsWith("eth", ignoreCase = true) -> Libbox.InterfaceTypeEthernet
+        else -> Libbox.InterfaceTypeOther
+    }
+
+    private fun makeInterface(
+        javaInterface: JavaNetworkInterface,
+        type: Int,
+        dnsServers: List<String>,
+        gateways: List<String>,
+        metered: Boolean,
+    ): LibboxNetworkInterface = LibboxNetworkInterface().apply {
+        name = javaInterface.name
+        index = javaInterface.index
+        mtu = runCatching { javaInterface.mtu }.getOrDefault(1500)
+        addresses = StringArray(javaInterface.interfaceAddresses.mapNotNull { address ->
+            address.address.hostAddress?.substringBefore('%')?.let { hostAddress ->
+                "$hostAddress/${address.networkPrefixLength}"
+            }
+        })
+        dnsServer = StringArray(dnsServers)
+        gateway = StringArray(gateways)
+        this.type = type
+        var interfaceFlags = 0
+        if (javaInterface.isUp) interfaceFlags = interfaceFlags or OsConstants.IFF_UP or OsConstants.IFF_RUNNING
+        if (javaInterface.isLoopback) interfaceFlags = interfaceFlags or OsConstants.IFF_LOOPBACK
+        if (javaInterface.isPointToPoint) interfaceFlags = interfaceFlags or OsConstants.IFF_POINTOPOINT
+        if (javaInterface.supportsMulticast()) interfaceFlags = interfaceFlags or OsConstants.IFF_MULTICAST
+        flags = interfaceFlags
+        this.metered = metered
     }
 
     override fun underNetworkExtension(): Boolean = false
     override fun includeAllNetworks(): Boolean = false
     override fun readWIFIState(): WIFIState? = null
     override fun clearDNSCache() = Unit
-    override fun sendNotification(notification: Notification) = Unit
+    override fun sendNotification(notification: LibboxNotification) = Unit
     override fun cancelNotification(identifier: String, typeID: Int) = Unit
     override fun startNeighborMonitor(listener: NeighborUpdateListener?) = Unit
     override fun closeNeighborMonitor(listener: NeighborUpdateListener?) = Unit
@@ -224,10 +398,11 @@ internal class SingBoxPlatform(private val vpnService: VpnService) : PlatformInt
     }
 }
 
-internal class StringArray(private val iterator: Iterator<String>) : StringIterator {
-    override fun len(): Int = 0
-    override fun hasNext(): Boolean = iterator.hasNext()
-    override fun next(): String = iterator.next()
+internal class StringArray(private val values: List<String>) : StringIterator {
+    private var index = 0
+    override fun len(): Int = values.size
+    override fun hasNext(): Boolean = index < values.size
+    override fun next(): String = values[index++]
 }
 
 private class InterfaceArray(private val iterator: Iterator<LibboxNetworkInterface>) : NetworkInterfaceIterator {

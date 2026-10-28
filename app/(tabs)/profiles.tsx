@@ -4,11 +4,11 @@ import * as FileSystem from "expo-file-system/legacy";
 import React, { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Card, C, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
+import { Card, C, DemoNotice, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
 import { useVpn, VpnProfile } from "@/lib/vpn-state";
 
 export default function ProfilesScreen() {
-  const { profiles, selectedProfileId, selectProfile, importConfig, removeProfile } = useVpn();
+  const { profiles, selectedProfileId, selectProfile, importConfig, removeProfile, nativeAvailable } = useVpn();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageOk, setMessageOk] = useState(true);
@@ -44,10 +44,11 @@ export default function ProfilesScreen() {
   };
 
   const imported = profiles.filter((profile) => profile.origin === "imported");
+  const examples = profiles.filter((profile) => profile.origin === "demo");
 
   return (
     <Page>
-      <PageTitle eyebrow="Rute koneksi" title="Pilih profil." subtitle="Impor konfigurasi sing-box dari perangkat untuk menambahkan profil." />
+      <PageTitle eyebrow="Rute koneksi" title="Pilih profil." subtitle={nativeAvailable ? "Profil contoh hanya untuk UI. Impor konfigurasi JSON dengan inbound TUN dan auto_route=true." : "Pilih lokasi pratinjau atau baca konfigurasi sing-box dari perangkat."} />
 
       <Pressable onPress={chooseConfig} disabled={busy} style={({ pressed }) => [styles.importButton, pressed && styles.pressed, busy && { opacity: 0.7 }]}>
         <View style={styles.importIcon}><Ionicons name="document-text-outline" size={22} color={C.lime} /></View>
@@ -65,6 +66,13 @@ export default function ProfilesScreen() {
         </View>
       ) : null}
 
+      <SectionTitle title="Lokasi contoh" action={<Text style={styles.count}>{examples.length} PROFIL</Text>} />
+      <View style={{ gap: 9 }}>
+        {examples.map((profile) => (
+          <ProfileCard key={profile.id} profile={profile} selected={profile.id === selectedProfileId} onSelect={() => selectProfile(profile.id)} />
+        ))}
+      </View>
+
       {imported.length ? (
         <>
           <SectionTitle title="Konfigurasi lokal" action={<Text style={styles.count}>{imported.length} IMPOR</Text>} />
@@ -77,7 +85,9 @@ export default function ProfilesScreen() {
         </>
       ) : null}
 
-      {!imported.length ? <Card><Text style={styles.emptyProfiles}>Belum ada konfigurasi. Impor file JSON sing-box untuk menambahkan profil.</Text></Card> : null}
+      {nativeAvailable
+        ? <DemoNotice compact title="Profil contoh" message="Endpoint contoh tidak berisi kredensial dan tidak dapat tersambung. Gunakan konfigurasi milikmu yang valid." />
+        : <DemoNotice compact title="Web Preview / Expo Go" message="Profil contoh hanya UI. Tunnel memerlukan custom Android build dengan modul native sing-box." />}
       <View style={styles.bottomSpace} />
     </Page>
   );
@@ -138,7 +148,6 @@ const styles = StyleSheet.create({
   removeText: { color: C.red, fontSize: 10, fontWeight: "700" },
   reimportHint: { color: "#A37A3E", fontSize: 9, marginTop: 2 },
   storageNote: { color: C.muted, fontSize: 10, lineHeight: 15, marginTop: -7 },
-  emptyProfiles: { color: C.muted, fontSize: 11, lineHeight: 17 },
   bottomSpace: { height: 4 },
   pressed: { opacity: 0.78 },
 });
