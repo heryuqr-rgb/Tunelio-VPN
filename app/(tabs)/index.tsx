@@ -8,6 +8,8 @@ import { formatBytes, formatDuration, useVpn } from "@/lib/vpn-state";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   const {
     status, selectedProfile, elapsedSeconds, connectOrDisconnect,
     uplinkBytes, downlinkBytes, trafficAvailable, nativeAvailable,
@@ -59,16 +61,16 @@ export default function HomeScreen() {
         <DemoNotice compact title="Belum ada tunnel perangkat" message="Web Preview dan Expo Go tidak menjalankan VpnService Android atau mengalihkan trafik." />
       ) : null}
 
-      <Pressable onPress={() => router.push("/profiles")} style={({ pressed }) => [styles.serverCard, pressed && styles.pressed]}>
+      <Pressable onPress={() => router.push("/profiles")} style={({ pressed }) => [styles.serverCard, dark && { backgroundColor: DARK.card, borderColor: DARK.line }, pressed && styles.pressed]}>
         <View style={styles.serverLeft}>
           <View style={styles.serverBadge}><Text style={styles.serverCode}>{selectedProfile.code}</Text></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.serverCaption}>PROFIL PILIHAN</Text>
-            <Text style={styles.serverName} numberOfLines={1}>{selectedProfile.name}</Text>
-            <Text style={styles.serverDetails} numberOfLines={1}>{selectedProfile.endpoint}</Text>
+            <Text style={[styles.serverCaption, dark && { color: DARK.muted }]}>PROFIL PILIHAN</Text>
+            <Text style={[styles.serverName, dark && { color: DARK.ink }]} numberOfLines={1}>{selectedProfile.name}</Text>
+            <Text style={[styles.serverDetails, dark && { color: DARK.muted }]} numberOfLines={1}>{selectedProfile.endpoint}</Text>
           </View>
         </View>
-        <View style={styles.changeLink}><Text style={styles.changeText}>Ubah</Text><Ionicons name="chevron-forward" size={15} color={C.limeDark} /></View>
+        <View style={styles.changeLink}><Text style={[styles.changeText, dark && { color: DARK.limeDark }]}>Ubah</Text><Ionicons name="chevron-forward" size={15} color={C.limeDark} /></View>
       </Pressable>
 
       <View style={styles.statsCard}>
@@ -86,7 +88,7 @@ export default function HomeScreen() {
       </View>
 
       {nativeAvailable && !trafficAvailable && isConnected ? (
-        <Text style={styles.trafficHint}>Counter trafik akan muncul setelah libbox mengirim status pertama.</Text>
+        <Text style={[styles.trafficHint, dark && { color: DARK.muted }]}>Counter trafik akan muncul setelah libbox mengirim status pertama.</Text>
       ) : null}
     </Page>
   );
