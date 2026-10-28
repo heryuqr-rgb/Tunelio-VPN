@@ -146,7 +146,7 @@ function normalizeImportedConfig(rawConfig: string): string {
 
   return JSON.stringify({
     log: { level: "info" },
-    dns: { servers: [{ tag: "cloudflare", address: "1.1.1.1" }] },
+    dns: { servers: [{ type: "udp", tag: "cloudflare", server: "1.1.1.1" }] },
     outbounds: [outbound, { type: "direct", tag: "direct" }],
     route: { final: "proxy", auto_detect_interface: true },
   });
