@@ -32,11 +32,6 @@ export default function HomeScreen() {
     <Page contentStyle={styles.page}>
       <BrandHeader rightLabel={nativeAvailable ? "ANDROID CORE" : "PREVIEW"} />
 
-      <View style={styles.intro}>
-        <Text style={styles.kicker}>RUANG PRIVASI KAMU</Text>
-        <Text style={styles.title}>Internetmu,{"\n"}di balik kendalimu.</Text>
-      </View>
-
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <View style={styles.liveTag}>
