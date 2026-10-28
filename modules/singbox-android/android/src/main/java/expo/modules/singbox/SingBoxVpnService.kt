@@ -49,6 +49,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
 
     override fun onCreate() {
         super.onCreate()
+        tunnelServiceAlive = true
         createNotificationChannel()
         startAsForeground("Menyiapkan koneksi sing-box…")
     }
@@ -74,6 +75,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
             return START_NOT_STICKY
         }
         val generation = synchronized(lifecycleLock) {
+            tunnelConnected = false
             stopping.set(false)
             sessionGeneration.incrementAndGet().also { activeConfigPath = configPath }
         }
@@ -129,6 +131,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
                 if (sessionGeneration.get() != generation || stopping.get()) false
                 else {
                     sessionStartedAt = System.currentTimeMillis()
+                    tunnelConnected = true
                     SingBoxBridge.emitStatus(this, "connected", "Tunnel TUN sing-box aktif.", sessionStartedAt)
                     true
                 }
@@ -161,7 +164,10 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
                 Log.e(TAG, "Gagal memulai sing-box", error)
             }
             synchronized(lifecycleLock) {
-                if (sessionGeneration.get() == generation) stopping.set(true)
+                if (sessionGeneration.get() == generation) {
+                    stopping.set(true)
+                    tunnelConnected = false
+                }
             }
             runCatching { commandClient?.disconnect() }
             commandClient = null
@@ -337,6 +343,8 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
     }
 
     override fun onDestroy() {
+        tunnelServiceAlive = false
+        tunnelConnected = false
         stopCore("Service VPN dihentikan.", true)
         super.onDestroy()
     }
@@ -352,6 +360,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
     private fun stopCore(message: String, stopSelfAfter: Boolean) {
         val stopRequest = synchronized(lifecycleLock) {
             if (!stopping.compareAndSet(false, true)) return
+            tunnelConnected = false
             val stopGeneration = sessionGeneration.incrementAndGet()
             val configPath = activeConfigPath
             activeConfigPath = null
@@ -449,5 +458,9 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
             Thread(task, "tunelio-singbox-core").apply { isDaemon = true }
         }
         @Volatile private var libboxReady = false
+        @Volatile internal var tunnelServiceAlive = false
+            private set
+        @Volatile internal var tunnelConnected = false
+            private set
     }
 }
