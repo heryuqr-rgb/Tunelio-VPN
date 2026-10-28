@@ -150,7 +150,6 @@ function normalizeImportedConfig(rawConfig: string): string {
     dns: { servers: [{ tag: "cloudflare", address: "1.1.1.1" }] },
     outbounds: [outbound, { type: "direct", tag: "direct" }],
     route: { final: "proxy", auto_detect_interface: true },
-    _profile_name: fragment || server,
   });
 }
 
@@ -319,7 +318,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as { outbounds?: unknown }).outbounds)) {
         return { ok: false, message: "Format belum dikenali. Impor JSON sing-box atau satu tautan vless://." };
       }
-      const root = parsed as { outbounds: unknown[]; _profile_name?: string };
+      const root = parsed as { outbounds: unknown[] };
       const eligible = root.outbounds.find((value): value is Record<string, unknown> => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return false;
         const outbound = value as Record<string, unknown>;
@@ -328,7 +327,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
           && (typeof outbound.server === "string" || typeof outbound.server_port === "number");
       });
       if (!eligible) return { ok: false, message: "File JSON terbaca, tetapi tidak ada outbound server yang bisa ditampilkan." };
-      const baseName = (root._profile_name || fileName.replace(/\.[^.]+$/, "")).trim();
+      const baseName = fileName.replace(/\.[^.]+$/, "").trim();
       const profile: VpnProfile = {
         id: `import-${Date.now()}`,
         name: typeof eligible.tag === "string" && eligible.tag.trim() ? eligible.tag : (baseName || "Profil impor"),
