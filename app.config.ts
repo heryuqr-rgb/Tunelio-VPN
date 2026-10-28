@@ -138,6 +138,8 @@ const config: ExpoConfig = {
         android: {
           buildArchs: ["arm64-v8a"],
           minSdkVersion: 24,
+          enableProguardInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
         },
       },
     ],
