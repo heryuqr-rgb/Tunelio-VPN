@@ -4,11 +4,14 @@ import * as FileSystem from "expo-file-system/legacy";
 import React, { useState } from "react";
 import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { Card, C, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
+import { Card, C, DARK, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
+import { useThemeContext } from "@/lib/theme-provider";
 import { useVpn, VpnProfile } from "@/lib/vpn-state";
 
 export default function ProfilesScreen() {
   const { profiles, selectedProfileId, selectProfile, importConfig, removeProfile, renameProfile, updateProfileConfig } = useVpn();
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageOk, setMessageOk] = useState(true);
@@ -115,8 +118,8 @@ export default function ProfilesScreen() {
       <Pressable onPress={chooseConfig} disabled={busy} style={({ pressed }) => [styles.importButton, pressed && styles.pressed, busy && { opacity: 0.7 }]}>
         <View style={styles.importIcon}><Ionicons name="document-text-outline" size={22} color={C.lime} /></View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.importTitle}>{busy ? "Membaca file…" : "Impor konfigurasi"}</Text>
-          <Text style={styles.importSubtitle}>JSON sing-box · file tetap lokal</Text>
+          <Text style={[styles.importTitle, dark && { color: DARK.ink }]}>{busy ? "Membaca file…" : "Impor konfigurasi"}</Text>
+          <Text style={[styles.importSubtitle, dark && { color: DARK.muted }]}>JSON sing-box · file tetap lokal</Text>
         </View>
         {busy ? <ActivityIndicator color={C.lime} /> : <Ionicons name="arrow-up-outline" size={19} color={C.lime} />}
       </Pressable>
@@ -141,22 +144,22 @@ export default function ProfilesScreen() {
                 onRemove={() => removeProfile(profile.id)} />
             ))}
           </View>
-          <Text style={styles.storageNote}>Nama, endpoint, dan JSON konfigurasi disimpan lokal di perangkat.</Text>
+          <Text style={[styles.storageNote, dark && { color: DARK.muted }]}>Nama, endpoint, dan JSON konfigurasi disimpan lokal di perangkat.</Text>
         </>
       ) : null}
 
-      {!imported.length && !message ? <Text style={styles.storageNote}>Belum ada profil. Impor file JSON sing-box dengan inbound TUN dan auto_route=true untuk mulai.</Text> : null}
+      {!imported.length && !message ? <Text style={[styles.storageNote, dark && { color: DARK.muted }]}>Belum ada profil. Impor file JSON sing-box dengan inbound TUN dan auto_route=true untuk mulai.</Text> : null}
       <View style={styles.bottomSpace} />
 
       <Modal visible={Boolean(editing)} animationType="slide" onRequestClose={() => setEditing(null)}>
-        <View style={styles.modalRoot}>
-          <Text style={styles.modalTitle}>Edit profil</Text>
-          <Text style={styles.modalLabel}>Nama profil</Text>
-          <TextInput value={editName} onChangeText={setEditName} autoCapitalize="none" placeholder="Nama profil" style={styles.nameInput} />
-          <Text style={styles.modalLabel}>Konfigurasi JSON</Text>
+        <View style={[styles.modalRoot, dark && { backgroundColor: DARK.bg }]}>
+          <Text style={[styles.modalTitle, dark && { color: DARK.ink }]}>Edit profil</Text>
+          <Text style={[styles.modalLabel, dark && { color: DARK.ink }]}>Nama profil</Text>
+          <TextInput value={editName} onChangeText={setEditName} autoCapitalize="none" placeholder="Nama profil" style={[styles.nameInput, dark && { backgroundColor: DARK.card, borderColor: DARK.line, color: DARK.ink }]} />
+          <Text style={[styles.modalLabel, dark && { color: DARK.ink }]}>Konfigurasi JSON</Text>
           <TextInput value={editConfig} onChangeText={setEditConfig} multiline autoCapitalize="none" autoCorrect={false}
-            textAlignVertical="top" placeholder='{"outbounds": [...]}' style={styles.jsonInput} />
-          <Text style={styles.modalHint}>JSON akan divalidasi sebelum disimpan. Jika valid, perubahan berlaku untuk profil ini.</Text>
+            textAlignVertical="top" placeholder='{"outbounds": [...]}' style={[styles.jsonInput, dark && { backgroundColor: DARK.card, borderColor: DARK.line, color: DARK.ink }]} />
+          <Text style={[styles.modalHint, dark && { color: DARK.muted }]}>JSON akan divalidasi sebelum disimpan. Jika valid, perubahan berlaku untuk profil ini.</Text>
           <View style={styles.modalActions}>
             <Pressable style={styles.cancelButton} onPress={() => setEditing(null)}><Text style={styles.cancelText}>Batal</Text></Pressable>
             <Pressable disabled={savingEdit} style={[styles.saveButton, savingEdit && { opacity: 0.6 }]} onPress={saveEdit}><Text style={styles.saveText}>{savingEdit ? "Menyimpan…" : "Simpan"}</Text></Pressable>
@@ -170,27 +173,29 @@ export default function ProfilesScreen() {
 function ProfileCard({ profile, selected, onSelect, onEdit, onExport, onRemove }: {
   profile: VpnProfile; selected: boolean; onSelect: () => void; onEdit: () => void; onExport: () => void; onRemove?: () => void;
 }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
-    <Card style={[styles.profileCard, selected && styles.profileSelected]}>
+    <Card style={[styles.profileCard, dark && { backgroundColor: DARK.card, borderColor: DARK.line }, selected && (dark ? { borderColor: DARK.limeDark, backgroundColor: "#1B2A20" } : styles.profileSelected)]}>
       <Pressable onPress={onSelect} style={({ pressed }) => [styles.profileMain, pressed && styles.pressed]}>
-        <View style={[styles.locationCode, selected && styles.locationCodeSelected]}><Text style={[styles.locationCodeText, selected && { color: C.forest }]}>{profile.code}</Text></View>
+        <View style={[styles.locationCode, dark && { backgroundColor: DARK.bg }, selected && styles.locationCodeSelected]}><Text style={[styles.locationCodeText, dark && { color: DARK.ink }, selected && { color: C.forest }]}>{profile.code}</Text></View>
         <View style={styles.profileInfo}>
           <View style={styles.profileNameRow}>
-            <Text style={styles.profileName} numberOfLines={1}>{profile.name}</Text>
+            <Text style={[styles.profileName, { color: DARK.ink }]} numberOfLines={1}>{profile.name}</Text>
             {profile.origin === "imported" ? <Pill label="IMPOR" background="#EDF2E8" color="#687A57" style={styles.miniPill} /> : null}
           </View>
-          <Text style={styles.profileEndpoint} numberOfLines={1}>{profile.endpoint}</Text>
-          <View style={styles.profileMeta}><Text style={styles.protocol}>{profile.protocol}</Text><View style={styles.metaDot} /><Text style={styles.latency}>{profile.latency}</Text></View>
+          <Text style={[styles.profileEndpoint, { color: DARK.muted }]} numberOfLines={1}>{profile.endpoint}</Text>
+          <View style={styles.profileMeta}><Text style={[styles.protocol, { color: DARK.limeDark }]}>{profile.protocol}</Text><View style={styles.metaDot} /><Text style={[styles.latency, { color: DARK.muted }]}>{profile.latency}</Text></View>
           {profile.origin === "imported" && profile.configLoaded === false ? <Text style={styles.reimportHint}>Impor ulang JSON untuk memuat detail</Text> : null}
         </View>
         {selected ? <View style={styles.selectedCheck}><Ionicons name="checkmark" size={14} color={C.forest} /></View> : <View style={styles.emptyRadio} />}
       </Pressable>
       <View style={styles.actionRow}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${profile.name}`} onPress={onEdit} style={styles.actionButton}>
-          <Ionicons name="create-outline" size={15} color={C.limeDark} /><Text style={styles.actionText}>Edit profil</Text>
+          <Ionicons name="create-outline" size={15} color={C.limeDark} /><Text style={[styles.actionText, dark && { color: DARK.limeDark }]}>Edit profil</Text>
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={`Export ${profile.name}`} onPress={onExport} style={styles.actionButton}>
-          <Ionicons name="download-outline" size={15} color={C.limeDark} /><Text style={styles.actionText}>Export JSON</Text>
+          <Ionicons name="download-outline" size={15} color={C.limeDark} /><Text style={[styles.actionText, dark && { color: DARK.limeDark }]}>Export JSON</Text>
         </Pressable>
         {onRemove ? (
           <Pressable accessibilityRole="button" accessibilityLabel={`Hapus ${profile.name}`} onPress={onRemove} style={styles.actionButton}>
