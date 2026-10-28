@@ -2,6 +2,24 @@ name: Tunelio ZIP Source - Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [build/tunelio-zip]
+    paths:
+      - 'app/**'
+      - 'assets/**'
+      - 'components/**'
+      - 'constants/**'
+      - 'hooks/**'
+      - 'lib/**'
+      - 'modules/**'
+      - 'plugins/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'app.config.ts'
+      - 'expo-env.d.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/build-tunelio-zip.yml'
   pull_request:
     branches: [main]
     paths:
