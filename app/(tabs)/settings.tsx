@@ -2,13 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
 
-import { Card, C, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
+import { Card, C, DARK, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
 import { useVpn } from "@/lib/vpn-state";
 import { useThemeContext } from "@/lib/theme-provider";
 
 export default function SettingsScreen() {
   const { preferences, setPreference, nativeAvailable, status, trafficAvailable } = useVpn();
   const { colorScheme, setColorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   const serviceConnected = nativeAvailable && status === "connected";
   return (
     <Page>
@@ -28,7 +29,7 @@ export default function SettingsScreen() {
         <Text style={styles.coreDesc}>{nativeAvailable ? "Build ini memuat modul Kotlin, libbox, dan VPNService Android. Impor konfigurasi TUN lalu setujui dialog VPN; status aktif berarti service membentuk tunnel. Uji rute dan konektivitas di perangkat sebelum mengandalkan proteksi." : "Web Preview atau Expo Go tidak memuat VPNService Android. Untuk tunnel, gunakan custom Android development build/APK yang menyertakan modul lokal; UI pratinjau tidak mengalihkan trafik perangkat."}</Text>
       </Card>
 
-      <Text style={styles.groupTitle}>DIAGNOSTIK</Text>
+      <Text style={[styles.groupTitle, dark && { color: DARK.muted }]}>DIAGNOSTIK</Text>
       <Card style={styles.preferenceCard}>
         <PreferenceRow
           icon="terminal-outline"
@@ -39,7 +40,7 @@ export default function SettingsScreen() {
         />
       </Card>
 
-      <Text style={styles.groupTitle}>TAMPILAN</Text>
+      <Text style={[styles.groupTitle, dark && { color: DARK.muted }]}>TAMPILAN</Text>
       <Card style={styles.preferenceCard}>
         <PreferenceRow
           icon="moon-outline"
@@ -50,7 +51,7 @@ export default function SettingsScreen() {
         />
       </Card>
 
-      <Text style={styles.groupTitle}>PRIVASI & APLIKASI</Text>
+      <Text style={[styles.groupTitle, dark && { color: DARK.muted }]}>PRIVASI & APLIKASI</Text>
       <Card style={styles.infoCard}>
         <InfoRow icon="phone-portrait-outline" title="Target desain" detail="Layar Android portrait, sentuhan satu tangan, tata letak adaptif untuk Infinix Hot 60 Pro." />
         <Divider />
@@ -59,16 +60,18 @@ export default function SettingsScreen() {
         <InfoRow icon="pulse-outline" title="Data koneksi" detail={nativeAvailable ? "Byte berasal dari status CommandClient libbox pada tunnel native; statistik tidak dibuat oleh UI." : "Web Preview tidak membaca trafik perangkat dan tidak memiliki tunnel VPN."} last />
       </Card>
 
-      <Text style={styles.aboutText}>Tunelio VPN · {nativeAvailable ? "Android native" : "Preview"}</Text>
+      <Text style={[styles.aboutText, dark && { color: DARK.ink }]}>Tunelio VPN · {nativeAvailable ? "Android native" : "Preview"}</Text>
     </Page>
   );
 }
 
 function PreferenceRow({ icon, title, detail, value, onChange }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string; detail: string; value: boolean; onChange: (value: boolean) => void }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
-    <View style={styles.preferenceRow}>
+    <View style={[styles.preferenceRow]}>
       <IconTile name={icon} color={C.limeDark} background={C.paleMint} size={38} />
-      <View style={styles.preferenceCopy}><Text style={styles.preferenceTitle}>{title}</Text><Text style={styles.preferenceDetail}>{detail}</Text></View>
+      <View style={styles.preferenceCopy}><Text style={[styles.preferenceTitle, dark && { color: DARK.ink }]}>{title}</Text><Text style={[styles.preferenceDetail, dark && { color: DARK.muted }]}>{detail}</Text></View>
       <Switch
         value={value}
         onValueChange={onChange}
@@ -82,10 +85,12 @@ function PreferenceRow({ icon, title, detail, value, onChange }: { icon: React.C
 }
 
 function InfoRow({ icon, title, detail, last }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string; detail: string; last?: boolean }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
     <View style={[styles.infoRow, !last && { paddingBottom: 12 }]}>
       <Ionicons name={icon} size={16} color={C.limeDark} />
-      <View style={{ flex: 1 }}><Text style={styles.infoTitle}>{title}</Text><Text style={styles.infoDetail}>{detail}</Text></View>
+      <View style={{ flex: 1 }}><Text style={[styles.infoTitle, dark && { color: DARK.ink }]}>{title}</Text><Text style={[styles.infoDetail, dark && { color: DARK.muted }]}>{detail}</Text></View>
     </View>
   );
 }
