@@ -3,7 +3,8 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { BrandHeader, C, DemoNotice, Page } from "@/components/vpn-ui";
+import { BrandHeader, C, DARK, DemoNotice, Page } from "@/components/vpn-ui";
+import { useThemeContext } from "@/lib/theme-provider";
 import { formatBytes, formatDuration, useVpn } from "@/lib/vpn-state";
 
 export default function HomeScreen() {
