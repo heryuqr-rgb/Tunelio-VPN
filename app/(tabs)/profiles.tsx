@@ -4,7 +4,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import React, { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Card, C, DemoNotice, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
+import { Card, C, Page, PageTitle, Pill, SectionTitle } from "@/components/vpn-ui";
 import { useVpn, VpnProfile } from "@/lib/vpn-state";
 
 export default function ProfilesScreen() {
@@ -44,11 +44,10 @@ export default function ProfilesScreen() {
   };
 
   const imported = profiles.filter((profile) => profile.origin === "imported");
-  const examples = profiles.filter((profile) => profile.origin === "demo");
 
   return (
     <Page>
-      <PageTitle eyebrow="Rute koneksi" title="Pilih profil." subtitle={nativeAvailable ? "Profil contoh hanya untuk UI. Impor konfigurasi JSON dengan inbound TUN dan auto_route=true." : "Pilih lokasi pratinjau atau baca konfigurasi sing-box dari perangkat."} />
+      <PageTitle eyebrow="Koneksi" title="Profil VPN" subtitle="Impor konfigurasi JSON sing-box. File dan kredensial tetap lokal." />
 
       <Pressable onPress={chooseConfig} disabled={busy} style={({ pressed }) => [styles.importButton, pressed && styles.pressed, busy && { opacity: 0.7 }]}>
         <View style={styles.importIcon}><Ionicons name="document-text-outline" size={22} color={C.lime} /></View>
@@ -66,13 +65,6 @@ export default function ProfilesScreen() {
         </View>
       ) : null}
 
-      <SectionTitle title="Lokasi contoh" action={<Text style={styles.count}>{examples.length} PROFIL</Text>} />
-      <View style={{ gap: 9 }}>
-        {examples.map((profile) => (
-          <ProfileCard key={profile.id} profile={profile} selected={profile.id === selectedProfileId} onSelect={() => selectProfile(profile.id)} />
-        ))}
-      </View>
-
       {imported.length ? (
         <>
           <SectionTitle title="Konfigurasi lokal" action={<Text style={styles.count}>{imported.length} IMPOR</Text>} />
@@ -85,9 +77,7 @@ export default function ProfilesScreen() {
         </>
       ) : null}
 
-      {nativeAvailable
-        ? <DemoNotice compact title="Profil contoh" message="Endpoint contoh tidak berisi kredensial dan tidak dapat tersambung. Gunakan konfigurasi milikmu yang valid." />
-        : <DemoNotice compact title="Web Preview / Expo Go" message="Profil contoh hanya UI. Tunnel memerlukan custom Android build dengan modul native sing-box." />}
+      {!imported.length && !message ? <Text style={styles.storageNote}>Belum ada profil. Impor file JSON sing-box dengan inbound TUN dan auto_route=true untuk mulai.</Text> : null}
       <View style={styles.bottomSpace} />
     </Page>
   );
