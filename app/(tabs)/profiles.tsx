@@ -73,7 +73,7 @@ export default function ProfilesScreen() {
               <ProfileCard key={profile.id} profile={profile} selected={profile.id === selectedProfileId} onSelect={() => selectProfile(profile.id)} onRemove={() => removeProfile(profile.id)} />
             ))}
           </View>
-          <Text style={styles.storageNote}>Nama dan endpoint profil disimpan lokal. Isi JSON/kredensial hanya berada di memori selama sesi aplikasi dan perlu diimpor kembali setelah aplikasi ditutup.</Text>
+          <Text style={styles.storageNote}>Nama, endpoint, dan JSON konfigurasi disimpan lokal di perangkat. Data ini tidak dikirim ke server aplikasi.</Text>
         </>
       ) : null}
 
