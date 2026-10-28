@@ -43,6 +43,14 @@ export default function SettingsScreen() {
           value={preferences.reconnectOnNetworkChange}
           onChange={(value) => setPreference("reconnectOnNetworkChange", value)}
         />
+        <Divider />
+        <PreferenceRow
+          icon="terminal-outline"
+          title="Log diagnostik"
+          detail="OFF mengurangi log native yang ditangkap dan disimpan. Aktifkan hanya saat mencari error."
+          value={preferences.diagnosticLogs}
+          onChange={(value) => setPreference("diagnosticLogs", value)}
+        />
       </Card>
 
       <Text style={styles.groupTitle}>PRIVASI & APLIKASI</Text>
