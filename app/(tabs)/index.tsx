@@ -43,12 +43,9 @@ export default function HomeScreen() {
             <View style={[styles.liveDot, { backgroundColor: statusTint }]} />
             <Text style={styles.liveLabel}>{status === "connected" ? (nativeAvailable ? "TUNNEL AKTIF" : "SIMULASI WEB") : isPending ? (status === "awaiting_permission" ? "IZIN ANDROID" : nativeAvailable ? "CORE MENYIAPKAN" : "PREVIEW DEMO") : isFailed ? "PERLU PERHATIAN" : nativeAvailable ? "SIAP · IMPOR CONFIG" : "UI PREVIEW"}</Text>
           </View>
-          <Ionicons name="ellipsis-horizontal" size={20} color="#9BAFA5" />
         </View>
 
         <View style={styles.orbitWrap}>
-          <View style={[styles.orbitOuter, isConnected && styles.orbitActive]} />
-          <View style={[styles.orbitMiddle, isConnected && styles.orbitMiddleActive]} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={isConnected ? "Putuskan VPN" : isPending ? "Batalkan permintaan VPN" : "Mulai VPN"}
@@ -57,7 +54,6 @@ export default function HomeScreen() {
           >
             {isPending ? <ActivityIndicator size="large" color={C.forest} /> : <Ionicons name={isConnected ? "shield-checkmark" : "power"} size={36} color={isConnected ? C.forest : isFailed ? "#FFD0C9" : C.lime} />}
           </Pressable>
-          <View style={[styles.orbitAccent, isConnected && { backgroundColor: C.lime }]} />
         </View>
 
         <Text style={styles.statusTitle}>{statusTitle}</Text>
@@ -112,23 +108,15 @@ function Stat({ label, value, icon, tint = C.lime }: { label: string; value: str
 
 const styles = StyleSheet.create({
   page: { gap: 16, paddingBottom: 22 },
-  intro: { gap: 6, paddingTop: 2, paddingBottom: 1 },
-  kicker: { color: C.limeDark, fontSize: 9, fontWeight: "800", letterSpacing: 1.8 },
-  title: { color: C.ink, fontSize: 29, lineHeight: 33, fontWeight: "800", letterSpacing: -1.1 },
   hero: { borderRadius: 28, backgroundColor: C.forest, paddingHorizontal: 18, paddingTop: 17, paddingBottom: 18, alignItems: "center", overflow: "hidden" },
   heroTop: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   liveTag: { flexDirection: "row", gap: 7, alignItems: "center", borderRadius: 20, backgroundColor: "#21362D", paddingHorizontal: 10, paddingVertical: 7 },
   liveDot: { width: 6, height: 6, borderRadius: 4 },
   liveLabel: { color: "#D6E1D9", fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
-  orbitWrap: { width: 176, height: 176, alignItems: "center", justifyContent: "center", marginTop: 9, marginBottom: 5 },
-  orbitOuter: { position: "absolute", width: 170, height: 170, borderRadius: 100, borderColor: "#2A4237", borderWidth: 1 },
-  orbitActive: { borderColor: "#81A94C" },
-  orbitMiddle: { position: "absolute", width: 142, height: 142, borderRadius: 100, borderColor: "#375044", borderWidth: 1, borderStyle: "dashed" },
-  orbitMiddleActive: { borderColor: "#78964F" },
-  powerButton: { width: 112, height: 112, borderRadius: 60, backgroundColor: "#20352C", borderWidth: 1, borderColor: "#45634C", alignItems: "center", justifyContent: "center" },
+  orbitWrap: { width: 132, height: 132, alignItems: "center", justifyContent: "center", marginTop: 5, marginBottom: 2 },
+  powerButton: { width: 96, height: 96, borderRadius: 60, backgroundColor: "#20352C", borderWidth: 1, borderColor: "#45634C", alignItems: "center", justifyContent: "center" },
   powerButtonActive: { backgroundColor: C.lime, borderColor: C.lime },
   powerButtonFailed: { backgroundColor: "#4A2F2C", borderColor: "#704541" },
-  orbitAccent: { width: 9, height: 9, borderRadius: 6, position: "absolute", top: 20, right: 24, backgroundColor: C.mint, borderWidth: 2, borderColor: C.forest },
   pressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
   statusTitle: { color: "#F2F6F1", fontSize: 18, fontWeight: "800", letterSpacing: -0.3, marginTop: 1 },
   statusSub: { color: "#A5B7AC", fontSize: 11, marginTop: 5, textAlign: "center", lineHeight: 16, maxWidth: 275 },
