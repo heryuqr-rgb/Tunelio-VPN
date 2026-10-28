@@ -54,6 +54,8 @@ type VpnContextValue = {
   selectProfile: (id: string) => void;
   importConfig: (fileName: string, rawConfig: string) => { ok: boolean; message: string };
   removeProfile: (id: string) => void;
+  renameProfile: (id: string, name: string) => void;
+  updateProfileConfig: (id: string, rawConfig: string) => { ok: boolean; message: string };
   setPreference: (key: keyof Preferences, value: boolean) => void;
   simulateFailure: () => void;
   resetDemo: () => void;
@@ -307,8 +309,8 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
 
       const baseName = fileName.replace(/\.[^.]+$/, "").trim();
       const profile: VpnProfile = {
-        id: `import-${Date.now()}`,
-        name: typeof eligible.tag === "string" && eligible.tag.trim() ? eligible.tag : (baseName || "Profil impor"),
+        id: `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: baseName || (typeof eligible.tag === "string" && eligible.tag.trim() ? eligible.tag : "Profil impor"),
         code: "IMP",
         endpoint: typeof eligible.server === "string" && eligible.server.trim() ? eligible.server : "Endpoint tersimpan di JSON",
         protocol: typeof eligible.type === "string" ? eligible.type.toUpperCase() : "custom",
@@ -345,6 +347,52 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     }
     recordEvent("Profil impor dihapus", wasSelected ? `${profile.name} · sesi dihentikan` : profile.name, "neutral");
   }, [profiles, recordEvent, selectedProfileId, status]);
+
+  const renameProfile = useCallback((id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const profile = profiles.find((item) => item.id === id && item.origin === "imported");
+    if (!profile) return;
+    setProfiles((current) => current.map((item) => item.id === id ? { ...item, name: trimmed, code: trimmed.slice(0, 3).toUpperCase() } : item));
+    recordEvent("Nama profil diperbarui", trimmed, "neutral");
+  }, [profiles, recordEvent]);
+
+  const updateProfileConfig = useCallback((id: string, rawConfig: string) => {
+    try {
+      const parsed: unknown = JSON.parse(rawConfig);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray((parsed as { outbounds?: unknown }).outbounds)) {
+        return { ok: false, message: "JSON tidak valid untuk konfigurasi sing-box (array outbounds tidak ditemukan)." };
+      }
+      const root = parsed as { outbounds: unknown[]; inbounds?: unknown };
+      const eligible = root.outbounds.find((value): value is Record<string, unknown> => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+        const outbound = value as Record<string, unknown>;
+        const type = String(outbound.type ?? "").toLowerCase();
+        return !["direct", "block", "dns", "reject", "pass", "selector", "urltest", "url-test", "dns-out"].includes(type)
+          && (typeof outbound.server === "string" || typeof outbound.server_port === "number");
+      });
+      if (!eligible) return { ok: false, message: "Tidak ditemukan outbound server pada JSON." };
+      const inbounds = Array.isArray(root.inbounds) ? root.inbounds : [];
+      if (!inbounds.some((value) => value && typeof value === "object" && !Array.isArray(value)
+        && (value as Record<string, unknown>).type === "tun"
+        && (value as Record<string, unknown>).auto_route === true)) {
+        return { ok: false, message: "Konfigurasi harus memiliki inbound TUN dengan auto_route=true." };
+      }
+      const profile = profiles.find((item) => item.id === id && item.origin === "imported");
+      if (!profile) return { ok: false, message: "Profil tidak ditemukan." };
+      setProfiles((current) => current.map((item) => item.id === id ? {
+        ...item,
+        rawConfig,
+        configLoaded: true,
+        endpoint: typeof eligible.server === "string" && eligible.server.trim() ? eligible.server : "Endpoint tersimpan di JSON",
+        protocol: typeof eligible.type === "string" ? eligible.type.toUpperCase() : "CUSTOM",
+      } : item));
+      recordEvent("Konfigurasi profil diperbarui", profile.name, "neutral");
+      return { ok: true, message: "Konfigurasi JSON berhasil diperbarui." };
+    } catch {
+      return { ok: false, message: "JSON tidak valid. Perubahan tidak disimpan." };
+    }
+  }, [profiles, recordEvent]);
 
   const setPreference = useCallback((key: keyof Preferences, value: boolean) => {
     setPreferences((current) => ({ ...current, [key]: value }));
@@ -383,11 +431,11 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<VpnContextValue>(() => ({
     status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds,
     uplinkBytes, downlinkBytes, trafficAvailable, nativeAvailable: isAndroidSingBoxAvailable,
-    connectOrDisconnect, selectProfile, importConfig, removeProfile, setPreference,
+    connectOrDisconnect, selectProfile, importConfig, removeProfile, renameProfile, updateProfileConfig, setPreference,
     simulateFailure, resetDemo, clearEvents, recordEvent,
   }), [status, profiles, selectedProfileId, selectedProfile, events, preferences, elapsedSeconds,
     uplinkBytes, downlinkBytes, trafficAvailable, connectOrDisconnect, selectProfile,
-    importConfig, removeProfile, setPreference, simulateFailure, resetDemo, clearEvents, recordEvent]);
+    importConfig, removeProfile, renameProfile, updateProfileConfig, setPreference, simulateFailure, resetDemo, clearEvents, recordEvent]);
 
   return <VpnContext.Provider value={value}>{children}</VpnContext.Provider>;
 }
