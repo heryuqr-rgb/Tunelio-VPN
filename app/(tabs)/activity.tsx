@@ -81,6 +81,8 @@ export default function ActivityScreen() {
 }
 
 function CheckRow({ icon, title, detail, good = false, last = false }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string; detail: string; good?: boolean; last?: boolean }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
     <View style={[styles.checkRow, !last && styles.checkBorder]}>
       <Ionicons name={icon} size={17} color={good ? "#6A9C61" : C.warning} />
