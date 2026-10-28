@@ -39,6 +39,7 @@ export type VpnEvent = {
 type Preferences = {
   autoConnect: boolean;
   reconnectOnNetworkChange: boolean;
+  diagnosticLogs: boolean;
 };
 
 type VpnContextValue = {
@@ -74,7 +75,7 @@ const BASE_PROFILES: VpnProfile[] = [
 const STORAGE_KEY = "tunelio.preferences.v1";
 const PROFILES_KEY = "tunelio.profiles.v1";
 const EVENTS_KEY = "tunelio.events.v1";
-const DEFAULT_PREFERENCES: Preferences = { autoConnect: false, reconnectOnNetworkChange: true };
+const DEFAULT_PREFERENCES: Preferences = { autoConnect: false, reconnectOnNetworkChange: true, diagnosticLogs: false };
 const VpnContext = createContext<VpnContextValue | null>(null);
 
 function clockNow() {
@@ -201,11 +202,11 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       setDownlinkBytes(traffic.downlinkBytes);
       setTrafficAvailable(traffic.trafficAvailable);
     });
-    const logSubscription = onSingBoxLog((entry) => {
+    const logSubscription = preferences.diagnosticLogs ? onSingBoxLog((entry) => {
       if (!active || !entry.message.trim()) return;
       const tone: LogTone = entry.level >= 4 ? "danger" : entry.level === 3 ? "warning" : "neutral";
       recordEvent("sing-box · log", entry.message, tone);
-    });
+    }) : null;
 
     void getSingBoxSnapshot()
       .then((snapshot) => applySnapshot(snapshot, snapshot.status !== "disconnected" || Boolean(snapshot.message)))
@@ -217,7 +218,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       trafficSubscription?.remove();
       logSubscription?.remove();
     };
-  }, [recordEvent]);
+  }, [recordEvent, preferences.diagnosticLogs]);
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? BASE_PROFILES[0];
 
@@ -362,7 +363,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
     const detail = isAndroidSingBoxAvailable
       ? "Disimpan lokal; layanan Android belum menerapkan kebijakan ini secara otomatis."
       : "Disimpan lokal; belum mengendalikan koneksi pratinjau.";
-    recordEvent("Preferensi diperbarui", `${key === "autoConnect" ? "Sambung otomatis" : "Koneksi ulang saat jaringan berubah"} · ${detail}`, "neutral");
+    recordEvent("Preferensi diperbarui", `${key === "autoConnect" ? "Sambung otomatis" : key === "reconnectOnNetworkChange" ? "Koneksi ulang saat jaringan berubah" : "Log diagnostik"} · ${detail}`, "neutral");
   }, [recordEvent]);
 
   const simulateFailure = useCallback(() => {
