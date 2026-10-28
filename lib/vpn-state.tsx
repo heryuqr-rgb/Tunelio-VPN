@@ -95,6 +95,63 @@ function prepareTunnelConfig(rawConfig: string): string {
   return JSON.stringify(config);
 }
 
+function normalizeImportedConfig(rawConfig: string): string {
+  const trimmed = rawConfig.trim();
+  if (!/^vless:\/\//i.test(trimmed)) return rawConfig;
+
+  const uri = new URL(trimmed);
+  const uuid = decodeURIComponent(uri.username);
+  const server = uri.hostname;
+  const serverPort = Number(uri.port || (uri.searchParams.get("security") === "tls" ? 443 : 80));
+  if (!uuid || !server || !Number.isInteger(serverPort) || serverPort < 1 || serverPort > 65535) {
+    throw new Error("Link VLESS tidak lengkap: periksa UUID, server, dan port.");
+  }
+
+  const security = (uri.searchParams.get("security") || "none").toLowerCase();
+  const outbound: Record<string, any> = {
+    type: "vless",
+    tag: "proxy",
+    server,
+    server_port: serverPort,
+    uuid,
+    packet_encoding: "xudp",
+  };
+  const flow = uri.searchParams.get("flow");
+  if (flow) outbound.flow = flow;
+
+  if (security === "tls" || security === "reality") {
+    const tls: Record<string, any> = {
+      enabled: true,
+      server_name: uri.searchParams.get("sni") || uri.searchParams.get("servername") || uri.searchParams.get("host") || server,
+      insecure: ["1", "true"].includes((uri.searchParams.get("allowInsecure") || uri.searchParams.get("insecure") || "").toLowerCase()),
+    };
+    if (security === "reality") {
+      const publicKey = uri.searchParams.get("pbk") || uri.searchParams.get("publicKey");
+      const shortId = uri.searchParams.get("sid") || uri.searchParams.get("shortId");
+      if (publicKey) tls.reality = { enabled: true, public_key: publicKey, ...(shortId ? { short_id: shortId } : {}) };
+    }
+    outbound.tls = tls;
+  }
+
+  const transport = (uri.searchParams.get("type") || "tcp").toLowerCase();
+  if (transport === "ws") {
+    const wsPath = uri.searchParams.get("path") || "/";
+    const host = uri.searchParams.get("host");
+    outbound.transport = { type: "ws", path: wsPath, ...(host ? { headers: { Host: host } } : {}) };
+  } else if (transport === "grpc") {
+    outbound.transport = { type: "grpc", service_name: uri.searchParams.get("serviceName") || uri.searchParams.get("service_name") || "" };
+  } else if (transport !== "tcp") {
+    throw new Error(`Transport VLESS "${transport}" belum didukung oleh impor tautan.`);
+  }
+
+  return JSON.stringify({
+    log: { level: "info" },
+    dns: { servers: [{ type: "udp", tag: "cloudflare", server: "1.1.1.1" }] },
+    outbounds: [outbound, { type: "direct", tag: "direct" }],
+    route: { final: "proxy", auto_detect_interface: true },
+  });
+}
+
 function clockNow() {
   return new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
@@ -255,9 +312,10 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
 
   const importConfig = useCallback((fileName: string, rawConfig: string) => {
     try {
-      const parsed: unknown = JSON.parse(rawConfig);
+      const normalizedConfig = normalizeImportedConfig(rawConfig);
+      const parsed: unknown = JSON.parse(normalizedConfig);
       if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as { outbounds?: unknown }).outbounds)) {
-        return { ok: false, message: "Format belum dikenali. Impor file JSON dengan array outbounds sing-box." };
+        return { ok: false, message: "Format belum dikenali. Impor JSON sing-box atau satu tautan vless://." };
       }
       const root = parsed as { outbounds: unknown[] };
       const eligible = root.outbounds.find((value): value is Record<string, unknown> => {
@@ -278,7 +336,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
         latency: "—",
         origin: "imported",
         configLoaded: true,
-        rawConfig,
+        rawConfig: normalizedConfig,
       };
       setProfiles((current) => [...current, profile]);
       setSelectedProfileId(profile.id);

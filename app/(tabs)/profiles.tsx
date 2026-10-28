@@ -18,7 +18,7 @@ export default function ProfilesScreen() {
     let pickedUri: string | undefined;
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ["application/json", "text/json", ".json"],
+        type: ["application/json", "text/json", "text/plain", ".json", ".txt"],
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -33,7 +33,7 @@ export default function ProfilesScreen() {
       setMessage(outcome.message);
       setMessageOk(outcome.ok);
     } catch {
-      setMessage("File belum dapat dibaca. Pilih konfigurasi JSON sing-box yang valid.");
+      setMessage("File belum dapat dibaca. Pilih JSON sing-box atau file teks berisi satu tautan vless://.");
       setMessageOk(false);
     } finally {
       if (pickedUri && Platform.OS !== "web") {
@@ -47,13 +47,13 @@ export default function ProfilesScreen() {
 
   return (
     <Page>
-      <PageTitle eyebrow="Rute koneksi" title="Pilih profil." subtitle="Impor konfigurasi sing-box dari perangkat untuk menambahkan profil." />
+      <PageTitle eyebrow="Rute koneksi" title="Pilih profil." subtitle="Impor JSON sing-box atau tautan VLESS untuk menambahkan profil." />
 
       <Pressable onPress={chooseConfig} disabled={busy} style={({ pressed }) => [styles.importButton, pressed && styles.pressed, busy && { opacity: 0.7 }]}>
         <View style={styles.importIcon}><Ionicons name="document-text-outline" size={22} color={C.lime} /></View>
         <View style={{ flex: 1 }}>
           <Text style={styles.importTitle}>{busy ? "Membaca file…" : "Impor konfigurasi"}</Text>
-          <Text style={styles.importSubtitle}>JSON sing-box · file tetap lokal</Text>
+          <Text style={styles.importSubtitle}>JSON sing-box / tautan VLESS · lokal</Text>
         </View>
         {busy ? <ActivityIndicator color={C.lime} /> : <Ionicons name="arrow-up-outline" size={19} color={C.lime} />}
       </Pressable>
