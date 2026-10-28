@@ -2,6 +2,7 @@ import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -36,6 +37,9 @@ export default function RootLayout() {
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
     initManusRuntime();
+    // Explicitly dismiss the native splash overlay once the root React tree is mounted.
+    // This prevents the splash artwork from remaining over the live VPN screen on some devices.
+    void SplashScreen.hideAsync().catch(() => undefined);
   }, []);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
