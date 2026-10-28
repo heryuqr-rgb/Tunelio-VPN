@@ -2,11 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Card, C, DemoNotice, IconTile, Page, PageTitle, SectionTitle } from "@/components/vpn-ui";
+import { Card, C, DARK, DemoNotice, IconTile, Page, PageTitle, SectionTitle } from "@/components/vpn-ui";
+import { useThemeContext } from "@/lib/theme-provider";
 import { useVpn } from "@/lib/vpn-state";
 
 export default function ActivityScreen() {
   const { status, events, simulateFailure, resetDemo, clearEvents, nativeAvailable, trafficAvailable, selectedProfile } = useVpn();
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   const issue = status === "failed";
   const configReady = selectedProfile.origin === "imported" && selectedProfile.configLoaded === true;
   const tunnelReady = nativeAvailable && status === "connected";
@@ -28,12 +31,12 @@ export default function ActivityScreen() {
           <IconTile name={issue ? "alert-circle-outline" : "pulse-outline"} color={issue ? C.red : C.limeDark} background={issue ? C.paleRed : C.paleMint} size={44} />
           <View style={{ flex: 1 }}>
             <Text style={styles.statusKicker}>STATUS SAAT INI</Text>
-            <Text style={styles.statusTitle}>{statusText}</Text>
+            <Text style={[styles.statusTitle, dark && { color: DARK.ink }]}>{statusText}</Text>
           </View>
           <View style={[styles.statusOrb, issue && { backgroundColor: C.red }, status === "connected" && nativeAvailable && { backgroundColor: C.mint }]} />
         </View>
         <View style={styles.divider} />
-        <Text style={styles.statusDesc}>{statusDesc}</Text>
+        <Text style={[styles.statusDesc, dark && { color: DARK.muted }]}>{statusDesc}</Text>
       </Card>
 
       {!nativeAvailable ? <DemoNotice title="Web Preview" message="Status UI dapat dicoba, tetapi paket ini tidak membuat VPNService atau mengalihkan trafik perangkat." /> : null}
@@ -55,11 +58,11 @@ export default function ActivityScreen() {
           <View key={event.id} style={[styles.logItem, index > 0 && styles.logDivider]}>
             <View style={[styles.logMark, { backgroundColor: toneColor(event.tone) }]} />
             <View style={styles.logCopy}>
-              <View style={styles.logTitleRow}><Text style={styles.logTitle}>{event.title}</Text><Text style={styles.logTime}>{event.time}</Text></View>
-              <Text style={styles.logDetail}>{event.detail}</Text>
+              <View style={styles.logTitleRow}><Text style={[styles.logTitle, dark && { color: DARK.ink }]}>{event.title}</Text><Text style={[styles.logTime, dark && { color: DARK.muted }]}>{event.time}</Text></View>
+              <Text style={[styles.logDetail, dark && { color: DARK.muted }]}>{event.detail}</Text>
             </View>
           </View>
-        )) : <Text style={styles.emptyLog}>Belum ada aktivitas. Perubahan service akan muncul di sini.</Text>}
+        )) : <Text style={[styles.emptyLog, dark && { color: DARK.muted }]}>Belum ada aktivitas. Perubahan service akan muncul di sini.</Text>}
       </Card>
 
       {!nativeAvailable ? (
@@ -81,7 +84,7 @@ function CheckRow({ icon, title, detail, good = false, last = false }: { icon: R
   return (
     <View style={[styles.checkRow, !last && styles.checkBorder]}>
       <Ionicons name={icon} size={17} color={good ? "#6A9C61" : C.warning} />
-      <View style={{ flex: 1 }}><Text style={styles.checkTitle}>{title}</Text><Text style={styles.checkDetail}>{detail}</Text></View>
+      <View style={{ flex: 1 }}><Text style={[styles.checkTitle, dark && { color: DARK.ink }]}>{title}</Text><Text style={[styles.checkDetail, dark && { color: DARK.muted }]}>{detail}</Text></View>
     </View>
   );
 }
