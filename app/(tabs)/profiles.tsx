@@ -191,15 +191,15 @@ function ProfileCard({ profile, selected, onSelect, onEdit, onExport, onRemove }
         {selected ? <View style={styles.selectedCheck}><Ionicons name="checkmark" size={14} color={C.forest} /></View> : <View style={styles.emptyRadio} />}
       </Pressable>
       <View style={styles.actionRow}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${profile.name}`} onPress={onEdit} style={styles.actionButton}>
-          <Ionicons name="create-outline" size={15} color={C.limeDark} /><Text style={[styles.actionText, dark && { color: DARK.limeDark }]}>Edit profil</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${profile.name}`} onPress={onEdit} style={[styles.actionButton, dark && styles.actionButtonDark]}>
+          <Ionicons name="create-outline" size={15} color={dark ? DARK.limeDark : C.limeDark} /><Text style={[styles.actionText, dark && { color: DARK.limeDark }]}>Edit profil</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Export ${profile.name}`} onPress={onExport} style={styles.actionButton}>
-          <Ionicons name="download-outline" size={15} color={C.limeDark} /><Text style={[styles.actionText, dark && { color: DARK.limeDark }]}>Export JSON</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Export ${profile.name}`} onPress={onExport} style={[styles.actionButton, dark && styles.actionButtonDark]}>
+          <Ionicons name="download-outline" size={15} color={dark ? DARK.limeDark : C.limeDark} /><Text style={[styles.actionText, dark && { color: DARK.limeDark }]}>Export JSON</Text>
         </Pressable>
         {onRemove ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={`Hapus ${profile.name}`} onPress={onRemove} style={styles.actionButton}>
-            <Ionicons name="trash-outline" size={14} color={C.red} /><Text style={[styles.actionText, { color: C.red }]}>Hapus</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Hapus ${profile.name}`} onPress={onRemove} style={[styles.actionButton, dark && styles.actionButtonDeleteDark]}>
+            <Ionicons name="trash-outline" size={14} color={dark ? "#F19A91" : C.red} /><Text style={[styles.actionText, { color: dark ? "#F19A91" : C.red }]}>Hapus</Text>
           </Pressable>
         ) : null}
       </View>
@@ -234,7 +234,9 @@ const styles = StyleSheet.create({
   selectedCheck: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: C.lime },
   emptyRadio: { width: 20, height: 20, borderRadius: 11, borderWidth: 1.5, borderColor: "#CCD5CD" },
   actionRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: 8, borderTopWidth: 1, borderTopColor: C.line, marginTop: 9, paddingTop: 8 },
-  actionButton: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 6, borderRadius: 9, backgroundColor: C.bg },
+  actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: C.bg, minHeight: 38 },
+  actionButtonDark: { backgroundColor: "#24352B", borderWidth: 1, borderColor: "#344B39" },
+  actionButtonDeleteDark: { backgroundColor: "#352522", borderWidth: 1, borderColor: "#51332E" },
   actionText: { color: C.limeDark, fontSize: 10, fontWeight: "800" },
   removeButton: { alignSelf: "flex-end", flexDirection: "row", alignItems: "center", gap: 5, paddingTop: 8, paddingHorizontal: 4 },
   removeText: { color: C.red, fontSize: 10, fontWeight: "700" },
