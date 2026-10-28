@@ -278,7 +278,12 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
                 }
             }
             override fun writeStatus(message: StatusMessage) {
-                SingBoxBridge.emitTraffic(this@SingBoxVpnService, message.uplinkTotal, message.downlinkTotal, message.trafficAvailable)
+                val upload = message.uplinkTotal.coerceAtLeast(0L)
+                val download = message.downlinkTotal.coerceAtLeast(0L)
+                SingBoxBridge.emitTraffic(this@SingBoxVpnService, upload, download, message.trafficAvailable)
+                if (!stopping.get() && message.trafficAvailable) {
+                    updateNotification("↑ ${formatTraffic(upload)}  ·  ↓ ${formatTraffic(download)}")
+                }
             }
             override fun writeGroups(message: OutboundGroupIterator?) = Unit
             override fun writeOutbounds(message: OutboundGroupItemIterator?) = Unit
@@ -401,6 +406,21 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
 
     private fun updateNotification(text: String) {
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(text))
+    }
+
+    private fun formatTraffic(bytes: Long): String {
+        if (bytes < 1024L) return "$bytes B"
+        val units = arrayOf("KB", "MB", "GB", "TB")
+        var value = bytes.toDouble()
+        var unit = -1
+        do {
+            value /= 1024.0
+            unit++
+        } while (value >= 1024.0 && unit < units.lastIndex)
+        val formatted = if (value >= 100) "%.0f".format(Locale.US, value)
+            else if (value >= 10) "%.1f".format(Locale.US, value)
+            else "%.2f".format(Locale.US, value)
+        return "$formatted ${units[unit]}"
     }
 
     private fun buildNotification(text: String): Notification {
