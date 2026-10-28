@@ -144,7 +144,6 @@ function normalizeImportedConfig(rawConfig: string): string {
     throw new Error(`Transport VLESS "${transport}" belum didukung oleh impor tautan.`);
   }
 
-  const fragment = uri.hash ? decodeURIComponent(uri.hash.slice(1)) : "";
   return JSON.stringify({
     log: { level: "info" },
     dns: { servers: [{ tag: "cloudflare", address: "1.1.1.1" }] },
