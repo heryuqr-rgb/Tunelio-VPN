@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 
-import { Card, C, DemoNotice, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
+import { Card, C, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
 import { useVpn } from "@/lib/vpn-state";
 
 export default function SettingsScreen() {
-  const { preferences, setPreference, recordEvent, nativeAvailable, status, trafficAvailable } = useVpn();
+  const { preferences, setPreference, nativeAvailable, status, trafficAvailable } = useVpn();
   const serviceConnected = nativeAvailable && status === "connected";
   return (
     <Page>
@@ -26,28 +26,12 @@ export default function SettingsScreen() {
         <Text style={styles.coreDesc}>{nativeAvailable ? "Build ini memuat modul Kotlin, libbox, dan VPNService Android. Impor konfigurasi TUN lalu setujui dialog VPN; status aktif berarti service membentuk tunnel. Uji rute dan konektivitas di perangkat sebelum mengandalkan proteksi." : "Web Preview atau Expo Go tidak memuat VPNService Android. Untuk tunnel, gunakan custom Android development build/APK yang menyertakan modul lokal; UI pratinjau tidak mengalihkan trafik perangkat."}</Text>
       </Card>
 
-      <Text style={styles.groupTitle}>PERILAKU KONEKSI</Text>
+      <Text style={styles.groupTitle}>DIAGNOSTIK</Text>
       <Card style={styles.preferenceCard}>
-        <PreferenceRow
-          icon="flash-outline"
-          title="Sambung otomatis"
-          detail="Tersimpan lokal; belum memulai VPNService otomatis."
-          value={preferences.autoConnect}
-          onChange={(value) => setPreference("autoConnect", value)}
-        />
-        <Divider />
-        <PreferenceRow
-          icon="refresh-outline"
-          title="Sambung ulang saat jaringan berubah"
-          detail="Tersimpan lokal; kebijakan reconnect otomatis belum diterapkan."
-          value={preferences.reconnectOnNetworkChange}
-          onChange={(value) => setPreference("reconnectOnNetworkChange", value)}
-        />
-        <Divider />
         <PreferenceRow
           icon="terminal-outline"
           title="Log diagnostik"
-          detail="OFF mengurangi log native yang ditangkap dan disimpan. Aktifkan hanya saat mencari error."
+          detail="OFF secara default. Aktifkan sementara untuk mencari error koneksi."
           value={preferences.diagnosticLogs}
           onChange={(value) => setPreference("diagnosticLogs", value)}
         />
@@ -62,10 +46,7 @@ export default function SettingsScreen() {
         <InfoRow icon="pulse-outline" title="Data koneksi" detail={nativeAvailable ? "Byte berasal dari status CommandClient libbox pada tunnel native; statistik tidak dibuat oleh UI." : "Web Preview tidak membaca trafik perangkat dan tidak memiliki tunnel VPN."} last />
       </Card>
 
-      <Pressable onPress={() => recordEvent("Tentang Tunelio", nativeAvailable ? "Build Android dengan modul sing-box/libbox lokal." : "Web Preview · native VPNService tidak dimuat.", "neutral")} style={({ pressed }) => [styles.aboutRow, pressed && { opacity: 0.75 }]}>
-        <Text style={styles.aboutText}>Tunelio VPN</Text><Text style={styles.version}>{nativeAvailable ? "ANDROID 0.2" : "PREVIEW 0.2"}</Text><Ionicons name="chevron-forward" size={15} color={C.muted} />
-      </Pressable>
-      {!nativeAvailable ? <DemoNotice compact title="Web/Expo Go" message="Pratinjau tidak dapat menggunakan VPNService Android; gunakan custom build untuk koneksi nyata." /> : null}
+      <Text style={styles.aboutText}>Tunelio VPN · {nativeAvailable ? "Android native" : "Preview"}</Text>
     </Page>
   );
 }
