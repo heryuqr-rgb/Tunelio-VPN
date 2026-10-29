@@ -1,5 +1,6 @@
 name: Tunelio ZIP Source - Android APK
 # Trigger a fresh validation build for the latest UI, splash, and VPN-state fixes.
+# Rebuild after restoring Expo's automatic splash-screen dismissal.
 
 on:
   workflow_dispatch:
