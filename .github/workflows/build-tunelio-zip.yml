@@ -106,7 +106,172 @@ jobs:
           echo "Largest APK entries (uncompressed):"
           unzip -l app/build/outputs/apk/release/app-release.apk | awk 'NR>3 && $4 != "" {print $1, $4}' | sort -nr | head -n 30
           echo "Native libraries packaged in APK:"
+          unzip -Z1 app/build/outputs/apk/release/app-release.apk | grep -E '^lib/[^/]+/[^/]+\.so
+          unzip -t app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK signature and alignment"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$ZIPALIGN" -c -v 4 app/build/outputs/apk/release/app-release.apk
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'assets/index\.android\.bundle'
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+ | sort || true
+          echo "Native library ABI folders:"
           unzip -Z1 app/build/outputs/apk/release/app-release.apk | grep -E '^lib/[^/]+/[^/]+\\.so          echo "Validate APK ZIP structure"
+          unzip -t app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK signature and alignment"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$ZIPALIGN" -c -v 4 app/build/outputs/apk/release/app-release.apk
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'assets/index\.android\.bundle'
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+ | cut -d/ -f2 | sort -u || true
+          echo "Validate APK ZIP structure"
+          unzip -t app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK signature and alignment"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$ZIPALIGN" -c -v 4 app/build/outputs/apk/release/app-release.apk
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'assets/index\.android\.bundle'
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+ | sort || true
+          echo "Native library ABI folders:"
+          unzip -Z1 app/build/outputs/apk/release/app-release.apk | grep -E '^lib/[^/]+/[^/]+\.so
+          unzip -t app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK signature and alignment"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$ZIPALIGN" -c -v 4 app/build/outputs/apk/release/app-release.apk
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'assets/index\.android\.bundle'
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+ | sort || true
+          echo "Native library ABI folders:"
+          unzip -Z1 app/build/outputs/apk/release/app-release.apk | grep -E '^lib/[^/]+/[^/]+\\.so          echo "Validate APK ZIP structure"
+          unzip -t app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK signature and alignment"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$ZIPALIGN" -c -v 4 app/build/outputs/apk/release/app-release.apk
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'assets/index\.android\.bundle'
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+ | cut -d/ -f2 | sort -u || true
+          echo "Validate APK ZIP structure"
+          unzip -t app/build/outputs/apk/release/app-release.apk
+          echo "Validate APK signature and alignment"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          test -n "$ZIPALIGN"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$ZIPALIGN" -c -v 4 app/build/outputs/apk/release/app-release.apk
+          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'assets/index\.android\.bundle'
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tunelio-zip-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
+ | cut -d/ -f2 | sort -u || true
+          echo "Validate APK ZIP structure"
           unzip -t app/build/outputs/apk/release/app-release.apk
           echo "Validate APK signature and alignment"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
