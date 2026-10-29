@@ -35,6 +35,20 @@ if [[ "${actual_commit}" != "${SOURCE_COMMIT}" ]]; then
   exit 1
 fi
 
+# CoreBox does not expose Tailscale features. Exclude the optional Tailscale build tag.
+python3 - "${SOURCE_DIR}/cmd/internal/build_libbox/main.go" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+needle = '"with_tailscale", "ts_omit_logtail", "ts_omit_ssh", "ts_omit_drive", "ts_omit_taildrop", "ts_omit_webclient", "ts_omit_doctor", "ts_omit_capture", "ts_omit_kube", "ts_omit_aws", "ts_omit_synology", "ts_omit_bird"'
+if needle not in s:
+    raise SystemExit("Expected Tailscale build-tag list not found; refusing to patch unknown sing-box source.")
+s = s.replace(needle, '"ts_omit_logtail", "ts_omit_ssh", "ts_omit_drive", "ts_omit_taildrop", "ts_omit_webclient", "ts_omit_doctor", "ts_omit_capture", "ts_omit_kube", "ts_omit_aws", "ts_omit_synology", "ts_omit_bird"')
+p.write_text(s)
+print("Excluded optional Tailscale feature from libbox build tags.")
+PY
+
 GOPATH_DIR="$(${GO_BIN} env GOPATH)"
 mkdir -p "${GOPATH_DIR}/bin"
 if [[ ! -x "${GOPATH_DIR}/bin/gomobile" ]]; then "${GO_BIN}" install "github.com/sagernet/gomobile/cmd/gomobile@${GOMOBILE_VERSION}"; fi
