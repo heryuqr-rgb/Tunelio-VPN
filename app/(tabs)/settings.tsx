@@ -60,7 +60,7 @@ export default function SettingsScreen() {
         <InfoRow icon="pulse-outline" title="Data koneksi" detail={nativeAvailable ? "Byte berasal dari status CommandClient libbox pada tunnel native; statistik tidak dibuat oleh UI." : "Web Preview tidak membaca trafik perangkat dan tidak memiliki tunnel VPN."} last />
       </Card>
 
-      <Text style={[styles.aboutText, dark && { color: DARK.ink }]}>Tunelio VPN · {nativeAvailable ? "Android native" : "Preview"}</Text>
+      <Text style={[styles.aboutText, dark && { color: DARK.ink }]}>CoreBox · {nativeAvailable ? "Android native" : "Preview"}</Text>
     </Page>
   );
 }
