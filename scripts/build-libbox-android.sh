@@ -4,7 +4,7 @@ set -euo pipefail
 readonly VERSION="v1.14.3"
 readonly SOURCE_COMMIT="7054cac5124465ffdb145870d7c01885566711b1"
 readonly GOMOBILE_VERSION="v0.1.12"
-readonly ANDROID_PLATFORM="${LIBBOX_ANDROID_PLATFORM:-android/arm,android/arm64}"
+readonly ANDROID_PLATFORM="${LIBBOX_ANDROID_PLATFORM:-android/arm64}"
 readonly SOURCE_DIR="${SING_BOX_SOURCE_DIR:-${HOME}/.cache/tunelio/sing-box-${VERSION}}"
 readonly PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly AAR_DIR="${PROJECT_DIR}/modules/singbox-android/android/libs"
