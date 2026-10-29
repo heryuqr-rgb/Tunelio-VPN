@@ -400,7 +400,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Tunelio VPN", NotificationManager.IMPORTANCE_LOW))
+            manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, "CoreBox VPN", NotificationManager.IMPORTANCE_LOW))
         }
     }
 
@@ -440,7 +440,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this)
         return builder
             .setSmallIcon(R.drawable.ic_stat_tunelio)
-            .setContentTitle("Tunelio VPN")
+            .setContentTitle("CoreBox VPN")
             .setContentText(text)
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
