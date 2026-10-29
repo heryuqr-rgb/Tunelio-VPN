@@ -33,7 +33,7 @@ export function Page({ children, contentStyle, scroll = true }: { children: Reac
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, contentStyle]}>
           {children}
         </ScrollView>
-      ) : <View onLayout={() => { void SplashScreen.hideAsync().catch(() => undefined); }} style={[styles.content, { flex: 1 }, contentStyle]}>{children}</View>}
+      ) : <View style={[styles.content, { flex: 1 }, contentStyle]}>{children}</View>}
     </SafeAreaView>
   );
 }
