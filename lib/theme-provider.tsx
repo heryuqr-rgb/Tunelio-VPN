@@ -80,7 +80,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <View style={[{ flex: 1 }, themeVariables]}>{children}</View>
+      {themeLoaded ? (
+        <View style={[{ flex: 1 }, themeVariables]}>{children}</View>
+      ) : (
+        // Match the native splash background while the saved theme is being read.
+        // Do not mount the first screen in a temporary theme and recolor it a moment later.
+        <View style={{ flex: 1, backgroundColor: "#0B1815" }} />
+      )}
     </ThemeContext.Provider>
   );
 }
