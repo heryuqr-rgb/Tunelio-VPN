@@ -292,15 +292,17 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray((parsed as { outbounds?: unknown }).outbounds)) {
         return { ok: false, message: "Format belum dikenali. Impor file JSON sing-box dengan array outbounds." };
       }
-      const root = parsed as { outbounds: unknown[]; inbounds?: unknown };
-      const eligible = root.outbounds.find((value): value is Record<string, unknown> => {
+      const root = parsed as { outbounds: unknown[]; endpoints?: unknown[]; inbounds?: unknown };
+      const isServerEntry = (value: unknown): value is Record<string, unknown> => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-        const outbound = value as Record<string, unknown>;
-        const type = String(outbound.type ?? "").toLowerCase();
+        const entry = value as Record<string, unknown>;
+        const type = String(entry.type ?? "").toLowerCase();
+        if (type === "wireguard" && Array.isArray(entry.peers) && entry.peers.length > 0) return true;
         return !["direct", "block", "dns", "reject", "pass", "selector", "urltest", "url-test", "dns-out"].includes(type)
-          && (typeof outbound.server === "string" || typeof outbound.server_port === "number");
-      });
-      if (!eligible) return { ok: false, message: "File JSON terbaca, tetapi tidak ada outbound server yang bisa ditampilkan." };
+          && (typeof entry.server === "string" || typeof entry.server_port === "number");
+      };
+      const eligible = [...root.outbounds, ...(Array.isArray(root.endpoints) ? root.endpoints : [])].find(isServerEntry);
+      if (!eligible) return { ok: false, message: "File JSON terbaca, tetapi tidak ada outbound/endpoint server yang bisa ditampilkan." };
       const inbounds = Array.isArray(root.inbounds) ? root.inbounds : [];
       const hasRoutedTun = inbounds.some((value) => value && typeof value === "object" && !Array.isArray(value)
         && (value as Record<string, unknown>).type === "tun"
@@ -312,7 +314,11 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
         id: `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: baseName || (typeof eligible.tag === "string" && eligible.tag.trim() ? eligible.tag : "Profil impor"),
         code: "IMP",
-        endpoint: typeof eligible.server === "string" && eligible.server.trim() ? eligible.server : "Endpoint tersimpan di JSON",
+        endpoint: typeof eligible.server === "string" && eligible.server.trim()
+          ? eligible.server
+          : Array.isArray(eligible.peers) && eligible.peers[0] && typeof eligible.peers[0] === "object" && typeof (eligible.peers[0] as Record<string, unknown>).address === "string"
+            ? String((eligible.peers[0] as Record<string, unknown>).address)
+            : "Endpoint tersimpan di JSON",
         protocol: typeof eligible.type === "string" ? eligible.type.toUpperCase() : "custom",
         latency: "—",
         origin: "imported",
@@ -363,15 +369,17 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray((parsed as { outbounds?: unknown }).outbounds)) {
         return { ok: false, message: "JSON tidak valid untuk konfigurasi sing-box (array outbounds tidak ditemukan)." };
       }
-      const root = parsed as { outbounds: unknown[]; inbounds?: unknown };
-      const eligible = root.outbounds.find((value): value is Record<string, unknown> => {
+      const root = parsed as { outbounds: unknown[]; endpoints?: unknown[]; inbounds?: unknown };
+      const isServerEntry = (value: unknown): value is Record<string, unknown> => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-        const outbound = value as Record<string, unknown>;
-        const type = String(outbound.type ?? "").toLowerCase();
+        const entry = value as Record<string, unknown>;
+        const type = String(entry.type ?? "").toLowerCase();
+        if (type === "wireguard" && Array.isArray(entry.peers) && entry.peers.length > 0) return true;
         return !["direct", "block", "dns", "reject", "pass", "selector", "urltest", "url-test", "dns-out"].includes(type)
-          && (typeof outbound.server === "string" || typeof outbound.server_port === "number");
-      });
-      if (!eligible) return { ok: false, message: "Tidak ditemukan outbound server pada JSON." };
+          && (typeof entry.server === "string" || typeof entry.server_port === "number");
+      };
+      const eligible = [...root.outbounds, ...(Array.isArray(root.endpoints) ? root.endpoints : [])].find(isServerEntry);
+      if (!eligible) return { ok: false, message: "Tidak ditemukan outbound atau endpoint server pada JSON." };
       const inbounds = Array.isArray(root.inbounds) ? root.inbounds : [];
       if (!inbounds.some((value) => value && typeof value === "object" && !Array.isArray(value)
         && (value as Record<string, unknown>).type === "tun"
@@ -384,7 +392,11 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
         ...item,
         rawConfig,
         configLoaded: true,
-        endpoint: typeof eligible.server === "string" && eligible.server.trim() ? eligible.server : "Endpoint tersimpan di JSON",
+        endpoint: typeof eligible.server === "string" && eligible.server.trim()
+          ? eligible.server
+          : Array.isArray(eligible.peers) && eligible.peers[0] && typeof eligible.peers[0] === "object" && typeof (eligible.peers[0] as Record<string, unknown>).address === "string"
+            ? String((eligible.peers[0] as Record<string, unknown>).address)
+            : "Endpoint tersimpan di JSON",
         protocol: typeof eligible.type === "string" ? eligible.type.toUpperCase() : "CUSTOM",
       } : item));
       recordEvent("Konfigurasi profil diperbarui", profile.name, "neutral");
