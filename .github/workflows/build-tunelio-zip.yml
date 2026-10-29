@@ -1,4 +1,5 @@
 name: Tunelio ZIP Source - Android APK
+# Trigger a fresh validation build for the latest UI, splash, and VPN-state fixes.
 
 on:
   workflow_dispatch:
