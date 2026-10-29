@@ -182,7 +182,6 @@ function ProfileCard({ profile, selected, onSelect, onEdit, onExport, onRemove }
         <View style={styles.profileInfo}>
           <View style={styles.profileNameRow}>
             <Text style={[styles.profileName, { color: DARK.ink }]} numberOfLines={1}>{profile.name}</Text>
-            {profile.origin === "imported" ? <Pill label="IMPOR" background="#EDF2E8" color="#687A57" style={styles.miniPill} /> : null}
           </View>
           <Text style={[styles.profileEndpoint, { color: DARK.muted }]} numberOfLines={1}>{profile.endpoint}</Text>
           <View style={styles.profileMeta}><Text style={[styles.protocol, { color: DARK.limeDark }]}>{profile.protocol}</Text><View style={styles.metaDot} /><Text style={[styles.latency, { color: DARK.muted }]}>{profile.latency}</Text></View>
