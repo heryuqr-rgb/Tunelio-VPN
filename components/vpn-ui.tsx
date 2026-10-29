@@ -46,7 +46,7 @@ export function BrandHeader({ rightLabel = "PRATINJAU" }: { rightLabel?: string 
           <Ionicons name="shield-checkmark" size={18} color={C.lime} />
         </View>
         <View>
-          <Text style={styles.brandName}>tunelio</Text>
+          <Text style={styles.brandName}>CoreBox</Text>
           <Text style={styles.brandCaption}>PRIVACY, SIMPLIFIED</Text>
         </View>
       </View>
