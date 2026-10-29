@@ -2,7 +2,6 @@ import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as SplashScreen from "expo-splash-screen";
 import { useThemeContext } from "@/lib/theme-provider";
 
 export const DARK = { bg: "#0B110E", card: "#151E19", ink: "#EDF4EE", muted: "#A0AEA5", line: "#2A3930", forest: "#101B16", paleMint: "#1D3429", paleYellow: "#382F1D", paleRed: "#3A2522", limeDark: "#B9E66A" };
@@ -31,7 +30,7 @@ export function Page({ children, contentStyle, scroll = true }: { children: Reac
   return (
     <SafeAreaView style={[styles.safe, dark && { backgroundColor: DARK.bg }]} edges={["top", "left", "right"]}>
       {scroll ? (
-        <ScrollView onLayout={() => { void SplashScreen.hideAsync().catch(() => undefined); }} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, contentStyle]}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, contentStyle]}>
           {children}
         </ScrollView>
       ) : <View onLayout={() => { void SplashScreen.hideAsync().catch(() => undefined); }} style={[styles.content, { flex: 1 }, contentStyle]}>{children}</View>}
