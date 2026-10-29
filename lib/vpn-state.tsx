@@ -75,6 +75,31 @@ function clockNow() {
   return new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
+function prepareConfigForConnect(rawConfig: string) {
+  // WARP's hostname may fail to resolve after Android routes DNS into the TUN.
+  // Use Cloudflare's documented consumer WARP anycast endpoint as a bootstrap
+  // address only for the known default endpoint; leave custom endpoints intact.
+  try {
+    const config = JSON.parse(rawConfig) as {
+      endpoints?: Array<{ type?: string; peers?: Array<{ address?: string }> }>;
+    };
+    let changed = false;
+    for (const endpoint of config.endpoints ?? []) {
+      if (String(endpoint.type ?? "").toLowerCase() !== "wireguard") continue;
+      for (const peer of endpoint.peers ?? []) {
+        if (typeof peer.address !== "string") continue;
+        if (/^engage\.cloudflareclient\.com(?::2408)?$/i.test(peer.address.trim())) {
+          peer.address = "162.159.192.1:2408";
+          changed = true;
+        }
+      }
+    }
+    return changed ? JSON.stringify(config) : rawConfig;
+  } catch {
+    return rawConfig;
+  }
+}
+
 function asErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Operasi VPN gagal. Periksa izin Android dan konfigurasi sing-box.";
 }
@@ -232,7 +257,7 @@ export function VpnProvider({ children }: { children: React.ReactNode }) {
       setDownlinkBytes(0);
       setTrafficAvailable(false);
       recordEvent("Meminta izin VPN Android", "Tinjau dialog sistem Android sebelum trafik dialihkan melalui TUN.", "warning");
-      void connectSingBox(selectedProfile.rawConfig)
+      void connectSingBox(prepareConfigForConnect(selectedProfile.rawConfig))
         .then((result) => setStatus(result.status))
         .catch((error: unknown) => {
           setStatus("failed");
