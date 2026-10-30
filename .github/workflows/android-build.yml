@@ -55,6 +55,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate CoreBox launcher PNG assets from SVG source
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          rsvg-convert -w 1024 -h 1024 assets/images/corebox-mark.svg -o assets/images/icon.png
+          rsvg-convert -w 1024 -h 1024 assets/images/corebox-foreground.svg -o assets/images/android-icon-foreground.png
+          rsvg-convert -w 1024 -h 1024 assets/images/corebox-background.svg -o assets/images/android-icon-background.png
+          rsvg-convert -w 1024 -h 1024 assets/images/corebox-monochrome.svg -o assets/images/android-icon-monochrome.png
+          cp assets/images/icon.png assets/images/favicon.png
+          ls -lh assets/images/icon.png assets/images/android-icon-*.png
+
       - name: Check Expo project configuration
         run: |
           pnpm exec expo --version
