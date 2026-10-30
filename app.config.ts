@@ -28,8 +28,8 @@ const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
   // App branding - update these values directly (do not use env vars)
-  appName: "Tunelio VPN",
-  appSlug: "tunelio",
+  appName: "CoreBox",
+  appSlug: "corebox",
   // Public CDN URL for the platform project logo; keep it in sync with the launcher identity.
   logoUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663315591719/HXgvcrhAosnMNtWR.png",
   scheme: schemeFromBundleId,
@@ -66,7 +66,7 @@ const config: ExpoConfig = {
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
-  userInterfaceStyle: "light",
+  userInterfaceStyle: "dark",
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
@@ -76,7 +76,7 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#0B1815",
+      backgroundColor: "#FFFFFF",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
@@ -107,27 +107,14 @@ const config: ExpoConfig = {
     "expo-asset",
     "expo-router",
     [
-      "expo-audio",
-      {
-        microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
-      },
-    ],
-    [
-      "expo-video",
-      {
-        supportsBackgroundPlayback: true,
-        supportsPictureInPicture: true,
-      },
-    ],
-    [
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#0B1815",
+        backgroundColor: "#FFFFFF",
         dark: {
-          backgroundColor: "#0B1815",
+          backgroundColor: "#FFFFFF",
         },
       },
     ],
@@ -138,9 +125,12 @@ const config: ExpoConfig = {
         android: {
           buildArchs: ["arm64-v8a"],
           minSdkVersion: 24,
+          enableMinifyInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
         },
       },
     ],
+    "./plugins/with-standalone-debug-bundle",
   ],
   experiments: {
     typedRoutes: true,

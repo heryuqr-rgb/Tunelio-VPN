@@ -28,7 +28,7 @@ type NativeEventModule = {
 type SingBoxNativeModule = {
   connect(configJson: string): Promise<{ status: NativeVpnStatus }>;
   disconnect(): Promise<void>;
-  getSnapshot(): Promise<NativeVpnSnapshot>;
+  getSnapshot(): NativeVpnSnapshot;
 };
 
 const nativeModule = Platform.OS === "android"
@@ -48,15 +48,15 @@ export function disconnectSingBox() {
   return nativeModule.disconnect();
 }
 
-export function getSingBoxSnapshot() {
-  if (!nativeModule) return Promise.resolve<NativeVpnSnapshot>({
+export async function getSingBoxSnapshot(): Promise<NativeVpnSnapshot> {
+  if (!nativeModule) return {
     status: "disconnected",
     message: "",
     startedAt: 0,
     uplinkBytes: 0,
     downlinkBytes: 0,
     trafficAvailable: false,
-  });
+  };
   return nativeModule.getSnapshot();
 }
 

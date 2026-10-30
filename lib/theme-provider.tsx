@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Appearance, View, useColorScheme as useSystemColorScheme } from "react-native";
 import { colorScheme as nativewindColorScheme, vars } from "nativewind";
 
@@ -10,10 +11,23 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+const THEME_STORAGE_KEY = "tunelio.theme.v1";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useSystemColorScheme() === "dark" ? "dark" : "light";
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>(systemScheme);
+  const [themeLoaded, setThemeLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void AsyncStorage.getItem(THEME_STORAGE_KEY).then((stored) => {
+      if (!active) return;
+      if (stored === "light" || stored === "dark") setColorSchemeState(stored);
+    }).catch(() => undefined).finally(() => {
+      if (active) setThemeLoaded(true);
+    });
+    return () => { active = false; };
+  }, []);
 
   const applyScheme = useCallback((scheme: ColorScheme) => {
     nativewindColorScheme.set(scheme);
@@ -32,11 +46,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setColorScheme = useCallback((scheme: ColorScheme) => {
     setColorSchemeState(scheme);
     applyScheme(scheme);
+    void AsyncStorage.setItem(THEME_STORAGE_KEY, scheme).catch(() => undefined);
   }, [applyScheme]);
 
   useEffect(() => {
+    if (!themeLoaded) return;
     applyScheme(colorScheme);
-  }, [applyScheme, colorScheme]);
+  }, [applyScheme, colorScheme, themeLoaded]);
 
   const themeVariables = useMemo(
     () =>
@@ -64,7 +80,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <View style={[{ flex: 1 }, themeVariables]}>{children}</View>
+      {themeLoaded ? (
+        <View style={[{ flex: 1 }, themeVariables]}>{children}</View>
+      ) : (
+        // Match the native splash background while the saved theme is being read.
+        // Do not mount the first screen in a temporary theme and recolor it a moment later.
+        <View style={{ flex: 1, backgroundColor: "#0B1815" }} />
+      )}
     </ThemeContext.Provider>
   );
 }

@@ -11,7 +11,7 @@ android {
   defaultConfig {
     minSdkVersion 24
     versionCode 1
-    versionName '1.0.0'
+    versionName "1.0.0"
   }
   sourceSets {
     main {
@@ -21,14 +21,6 @@ android {
 }
 
 dependencies {
-  implementation files('libs/libbox.aar')
-}
-
-// This Expo module is consumed as a project dependency by the app. Android Gradle
-// cannot bundle a local AAR inside another AAR; the app must merge libbox.aar
-// directly from this module's dependency instead of publishing this module as an AAR.
-tasks.configureEach {
-  if (name == 'bundleDebugAar' || name == 'bundleReleaseAar') {
-    enabled = false
-  }
+  // Compile against upstream libbox bindings; the config plugin packages the AAR in :app.
+  compileOnly files(rootProject.file('../modules/singbox-android/android/libs/libbox.aar'))
 }

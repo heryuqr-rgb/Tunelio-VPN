@@ -1,12 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 
-import { Card, C, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
+import { Card, C, DARK, Divider, IconTile, Page, PageTitle, Pill } from "@/components/vpn-ui";
 import { useVpn } from "@/lib/vpn-state";
+import { useThemeContext } from "@/lib/theme-provider";
 
 export default function SettingsScreen() {
-  const { preferences, setPreference, recordEvent } = useVpn();
+  const { preferences, setPreference, nativeAvailable, status, trafficAvailable } = useVpn();
+  const { colorScheme, setColorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
+  const serviceConnected = nativeAvailable && status === "connected";
   return (
     <Page>
       <PageTitle eyebrow="Preferensi" title="Atur caramu." subtitle="Pilihan dasar koneksi dan transparansi tentang build ini." />
@@ -16,55 +20,58 @@ export default function SettingsScreen() {
           <View style={styles.coreIcon}><Ionicons name="git-network-outline" size={22} color={C.lime} /></View>
           <View style={{ flex: 1 }}>
             <Text style={styles.coreLabel}>MESIN VPN</Text>
-            <Text style={styles.coreTitle}>sing-box</Text>
-            <Text style={styles.coreSub}>Menunggu integrasi VPN native</Text>
+            <Text style={styles.coreTitle}>sing-box / libbox</Text>
+            <Text style={styles.coreSub}>{serviceConnected ? trafficAvailable ? "Tunnel hidup · counter byte diterima" : "Tunnel TUN aktif · menunggu trafik" : nativeAvailable ? "Modul native tersedia di build ini" : "Build Android native belum tersedia"}</Text>
           </View>
-          <Pill label="BELUM AKTIF" background="#314237" color="#D8C08A" />
+          <Pill label={serviceConnected ? "TUN AKTIF" : nativeAvailable ? "NATIVE SIAP" : "PREVIEW"} background={serviceConnected ? "#29463A" : "#314237"} color={serviceConnected ? C.mint : "#D8C08A"} />
         </View>
         <Divider />
-        <Text style={styles.coreDesc}>Core sing-box dan layanan VPN Android harus terhubung serta diuji sebelum koneksi dapat digunakan.</Text>
+        <Text style={styles.coreDesc}>{nativeAvailable ? "Build ini memuat modul Kotlin, libbox, dan VPNService Android. Impor konfigurasi TUN lalu setujui dialog VPN; status aktif berarti service membentuk tunnel. Uji rute dan konektivitas di perangkat sebelum mengandalkan proteksi." : "Web Preview atau Expo Go tidak memuat VPNService Android. Untuk tunnel, gunakan custom Android development build/APK yang menyertakan modul lokal; UI pratinjau tidak mengalihkan trafik perangkat."}</Text>
       </Card>
 
-      <Text style={styles.groupTitle}>PERILAKU KONEKSI</Text>
+      <Text style={[styles.groupTitle, dark && { color: DARK.muted }]}>DIAGNOSTIK</Text>
       <Card style={styles.preferenceCard}>
         <PreferenceRow
-          icon="flash-outline"
-          title="Sambung otomatis"
-          detail="Pengaturan tersimpan; koneksi otomatis belum tersedia"
-          value={preferences.autoConnect}
-          onChange={(value) => setPreference("autoConnect", value)}
+          icon="terminal-outline"
+          title="Log diagnostik"
+          detail="OFF secara default. Aktifkan sementara untuk mencari error koneksi."
+          value={preferences.diagnosticLogs}
+          onChange={(value) => setPreference("diagnosticLogs", value)}
         />
-        <Divider />
+      </Card>
+
+      <Text style={[styles.groupTitle, dark && { color: DARK.muted }]}>TAMPILAN</Text>
+      <Card style={styles.preferenceCard}>
         <PreferenceRow
-          icon="refresh-outline"
-          title="Sambung ulang saat jaringan berubah"
-          detail="Pengaturan tersimpan; penyambungan ulang belum aktif."
-          value={preferences.reconnectOnNetworkChange}
-          onChange={(value) => setPreference("reconnectOnNetworkChange", value)}
+          icon="moon-outline"
+          title="Mode gelap"
+          detail="Aktifkan tampilan gelap dan simpan pilihan ini untuk pembukaan berikutnya."
+          value={colorScheme === "dark"}
+          onChange={(value) => setColorScheme(value ? "dark" : "light")}
         />
       </Card>
 
-      <Text style={styles.groupTitle}>PRIVASI & APLIKASI</Text>
+      <Text style={[styles.groupTitle, dark && { color: DARK.muted }]}>PRIVASI & APLIKASI</Text>
       <Card style={styles.infoCard}>
-        <InfoRow icon="phone-portrait-outline" title="Target desain" detail="Layar Android portrait, sentuhan satu tangan, tata letak adaptif." />
+        <InfoRow icon="phone-portrait-outline" title="Target desain" detail="Layar Android portrait, sentuhan satu tangan, tata letak adaptif untuk Infinix Hot 60 Pro." />
         <Divider />
-        <InfoRow icon="document-lock-outline" title="File konfigurasi" detail="Dibaca di perangkat. Isi JSON tidak dikirim ke server; perlu impor ulang setelah aplikasi ditutup." />
+        <InfoRow icon="document-lock-outline" title="File konfigurasi" detail="Dibaca di perangkat. JSON/kredensial hanya dikirim ke modul lokal untuk membuka tunnel, tidak ke server aplikasi; impor ulang setelah sesi ditutup." />
         <Divider />
-        <InfoRow icon="information-circle-outline" title="Data koneksi" detail="Statistik hanya ditampilkan jika tersedia dari layanan VPN native." last />
+        <InfoRow icon="pulse-outline" title="Data koneksi" detail={nativeAvailable ? "Byte berasal dari status CommandClient libbox pada tunnel native; statistik tidak dibuat oleh UI." : "Web Preview tidak membaca trafik perangkat dan tidak memiliki tunnel VPN."} last />
       </Card>
 
-      <Pressable onPress={() => recordEvent("Tentang Tunelio", "Versi pratinjau UI · belum terhubung ke tunnel native.", "neutral")} style={({ pressed }) => [styles.aboutRow, pressed && { opacity: 0.75 }]}>
-        <Text style={styles.aboutText}>Tunelio VPN</Text><Text style={styles.version}>PREVIEW 0.1</Text><Ionicons name="chevron-forward" size={15} color={C.muted} />
-      </Pressable>
+      <Text style={[styles.aboutText, dark && { color: DARK.ink }]}>CoreBox · {nativeAvailable ? "Android native" : "Preview"}</Text>
     </Page>
   );
 }
 
 function PreferenceRow({ icon, title, detail, value, onChange }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string; detail: string; value: boolean; onChange: (value: boolean) => void }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
-    <View style={styles.preferenceRow}>
+    <View style={[styles.preferenceRow]}>
       <IconTile name={icon} color={C.limeDark} background={C.paleMint} size={38} />
-      <View style={styles.preferenceCopy}><Text style={styles.preferenceTitle}>{title}</Text><Text style={styles.preferenceDetail}>{detail}</Text></View>
+      <View style={styles.preferenceCopy}><Text style={[styles.preferenceTitle, dark && { color: DARK.ink }]}>{title}</Text><Text style={[styles.preferenceDetail, dark && { color: DARK.muted }]}>{detail}</Text></View>
       <Switch
         value={value}
         onValueChange={onChange}
@@ -78,10 +85,12 @@ function PreferenceRow({ icon, title, detail, value, onChange }: { icon: React.C
 }
 
 function InfoRow({ icon, title, detail, last }: { icon: React.ComponentProps<typeof Ionicons>["name"]; title: string; detail: string; last?: boolean }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
     <View style={[styles.infoRow, !last && { paddingBottom: 12 }]}>
       <Ionicons name={icon} size={16} color={C.limeDark} />
-      <View style={{ flex: 1 }}><Text style={styles.infoTitle}>{title}</Text><Text style={styles.infoDetail}>{detail}</Text></View>
+      <View style={{ flex: 1 }}><Text style={[styles.infoTitle, dark && { color: DARK.ink }]}>{title}</Text><Text style={[styles.infoDetail, dark && { color: DARK.muted }]}>{detail}</Text></View>
     </View>
   );
 }

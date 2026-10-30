@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { C } from "@/components/vpn-ui";
 import { VpnProvider } from "@/lib/vpn-state";
+import { useThemeContext } from "@/lib/theme-provider";
 
 const TAB_ICONS = {
   index: "shield-checkmark-outline",
@@ -15,13 +16,15 @@ const TAB_ICONS = {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
   return (
     <VpnProvider>
       <Tabs
         screenOptions={({ route }) => ({
           headerShown: false,
-          tabBarActiveTintColor: C.limeDark,
+          tabBarActiveTintColor: dark ? C.lime : C.limeDark,
           tabBarInactiveTintColor: "#96A29B",
           tabBarLabelStyle: { fontSize: 10, fontWeight: "700", marginTop: 1 },
           tabBarIcon: ({ color, size }) => {
@@ -32,8 +35,8 @@ export default function TabLayout() {
             height: 58 + bottomPadding,
             paddingTop: 8,
             paddingBottom: bottomPadding,
-            backgroundColor: "#FFFFFF",
-            borderTopColor: "#E7ECE5",
+            backgroundColor: dark ? "#111815" : "#FFFFFF",
+            borderTopColor: dark ? "#29362F" : "#E7ECE5",
             borderTopWidth: 1,
             elevation: 0,
           },

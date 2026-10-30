@@ -69,13 +69,27 @@ internal object SingBoxBridge {
 
     fun snapshot(context: Context): Map<String, Any> {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val storedState = prefs.getString(KEY_STATE, "disconnected") ?: "disconnected"
+        // Preferences may outlive a force-stop. Never report a persisted "connected"
+        // state unless the live VPN service and tunnel are both still active.
+        val live = SingBoxVpnService.tunnelServiceAlive && SingBoxVpnService.tunnelConnected
+        if (!live && storedState != "disconnected") {
+            prefs.edit()
+                .putString(KEY_STATE, "disconnected")
+                .putString(KEY_MESSAGE, "Tunnel tidak aktif; status lama telah disinkronkan.")
+                .putLong(KEY_STARTED_AT, 0L)
+                .putLong(KEY_UPLINK, 0L)
+                .putLong(KEY_DOWNLINK, 0L)
+                .putBoolean(KEY_TRAFFIC_AVAILABLE, false)
+                .apply()
+        }
         return mapOf(
-            "status" to (prefs.getString(KEY_STATE, "disconnected") ?: "disconnected"),
-            "message" to (prefs.getString(KEY_MESSAGE, "") ?: ""),
-            "startedAt" to prefs.getLong(KEY_STARTED_AT, 0L),
-            "uplinkBytes" to prefs.getLong(KEY_UPLINK, 0L),
-            "downlinkBytes" to prefs.getLong(KEY_DOWNLINK, 0L),
-            "trafficAvailable" to prefs.getBoolean(KEY_TRAFFIC_AVAILABLE, false),
+            "status" to if (live) storedState else "disconnected",
+            "message" to if (live) (prefs.getString(KEY_MESSAGE, "") ?: "") else "Tunnel tidak aktif.",
+            "startedAt" to if (live) prefs.getLong(KEY_STARTED_AT, 0L) else 0L,
+            "uplinkBytes" to if (live) prefs.getLong(KEY_UPLINK, 0L) else 0L,
+            "downlinkBytes" to if (live) prefs.getLong(KEY_DOWNLINK, 0L) else 0L,
+            "trafficAvailable" to (live && prefs.getBoolean(KEY_TRAFFIC_AVAILABLE, false)),
         )
     }
 
@@ -100,7 +114,11 @@ internal object SingBoxBridge {
 
     private fun redact(message: String): String {
         if (message.isBlank()) return message
-        val credential = Regex("(?i)(password|passwd|uuid|token|secret|private[_-]?key|authorization)(\\s*[=:]\\s*)(\\\"[^\\\"]*\\\"|'[^']*'|[^,;\\s}]+)")
-        return credential.replace(message) { match -> "${match.groupValues[1]}${match.groupValues[2]}••••" }
+        val keyedCredential = Regex("(?i)([\\\"]?(?:password|passwd|uuid|token|secret|private[_-]?key|authorization|bearer)[\\\"]?\\s*[=:]\\s*)(?:\\\"(?:\\\\.|[^\\\"])*\\\"|'(?:\\\\.|[^'])*'|[^,;\\s}]+)")
+        val uriUserInfo = Regex("(?i)([a-z][a-z0-9+.-]*://)[^/@\\s]+@")
+        val bearerToken = Regex("(?i)(\\bBearer\\s+)[A-Za-z0-9._~+/-]+=*")
+        val keyed = keyedCredential.replace(message) { match -> "${match.groupValues[1]}••••" }
+        val uri = uriUserInfo.replace(keyed) { match -> "${match.groupValues[1]}••••@" }
+        return bearerToken.replace(uri) { match -> "${match.groupValues[1]}••••" }
     }
 }

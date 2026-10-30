@@ -2,6 +2,9 @@ import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useThemeContext } from "@/lib/theme-provider";
+
+export const DARK = { bg: "#0B110E", card: "#151E19", ink: "#EDF4EE", muted: "#A0AEA5", line: "#2A3930", forest: "#101B16", paleMint: "#1D3429", paleYellow: "#382F1D", paleRed: "#3A2522", limeDark: "#B9E66A" };
 
 export const C = {
   bg: "#F4F6F1",
@@ -22,8 +25,10 @@ export const C = {
 };
 
 export function Page({ children, contentStyle, scroll = true }: { children: React.ReactNode; contentStyle?: StyleProp<ViewStyle>; scroll?: boolean }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={[styles.safe, dark && { backgroundColor: DARK.bg }]} edges={["top", "left", "right"]}>
       {scroll ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, contentStyle]}>
           {children}
@@ -33,7 +38,7 @@ export function Page({ children, contentStyle, scroll = true }: { children: Reac
   );
 }
 
-export function BrandHeader({ rightLabel = "VPN LOKAL" }: { rightLabel?: string }) {
+export function BrandHeader({ rightLabel = "PRATINJAU" }: { rightLabel?: string }) {
   return (
     <View style={styles.header}>
       <View style={styles.brandRow}>
@@ -41,7 +46,7 @@ export function BrandHeader({ rightLabel = "VPN LOKAL" }: { rightLabel?: string 
           <Ionicons name="shield-checkmark" size={18} color={C.lime} />
         </View>
         <View>
-          <Text style={styles.brandName}>tunelio</Text>
+          <Text style={styles.brandName}>CoreBox</Text>
           <Text style={styles.brandCaption}>PRIVACY, SIMPLIFIED</Text>
         </View>
       </View>
@@ -54,17 +59,35 @@ export function BrandHeader({ rightLabel = "VPN LOKAL" }: { rightLabel?: string 
 }
 
 export function PageTitle({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle?: string }) {
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
   return (
     <View style={styles.pageTitle}>
-      <Text style={styles.eyebrow}>{eyebrow.toUpperCase()}</Text>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <Text style={[styles.eyebrow, dark && { color: DARK.limeDark }]}>{eyebrow.toUpperCase()}</Text>
+      <Text style={[styles.title, dark && { color: DARK.ink }]}>{title}</Text>
+      {subtitle ? <Text style={[styles.subtitle, dark && { color: DARK.muted }]}>{subtitle}</Text> : null}
     </View>
   );
 }
 
 export function SectionTitle({ title, action }: { title: string; action?: React.ReactNode }) {
-  return <View style={styles.sectionRow}><Text style={styles.sectionTitle}>{title}</Text>{action}</View>;
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
+  return <View style={styles.sectionRow}><Text style={[styles.sectionTitle, dark && { color: DARK.ink }]}>{title}</Text>{action}</View>;
+}
+
+export function DemoNotice({ compact = false, title = "Mode pratinjau", message }: { compact?: boolean; title?: string; message?: string }) {
+  return (
+    <View style={[styles.notice, compact && styles.noticeCompact]}>
+      <Ionicons name="information-circle" size={18} color={C.limeDark} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.noticeTitle}>{title}</Text>
+        <Text style={styles.noticeText}>
+          {message ?? (compact ? "Tunnel native sing-box belum aktif." : "Status dan statistik adalah simulasi. Build ini belum mengalihkan lalu lintas perangkat ke VPN.")}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 export function Pill({ label, background = C.paleMint, color = C.limeDark, style }: { label: string; background?: string; color?: string; style?: StyleProp<ViewStyle> }) {
@@ -72,7 +95,9 @@ export function Pill({ label, background = C.paleMint, color = C.limeDark, style
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
+  return <View style={[styles.card, dark && { backgroundColor: DARK.card, borderColor: DARK.line }, style]}>{children}</View>;
 }
 
 export function SmallLabel({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
@@ -80,11 +105,15 @@ export function SmallLabel({ children, style }: { children: React.ReactNode; sty
 }
 
 export function IconTile({ name, color = C.ink, background = C.bg, size = 40 }: { name: React.ComponentProps<typeof Ionicons>["name"]; color?: string; background?: string; size?: number }) {
-  return <View style={{ width: size, height: size, borderRadius: 14, backgroundColor: background, justifyContent: "center", alignItems: "center" }}><Ionicons name={name} size={19} color={color} /></View>;
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
+  return <View style={{ width: size, height: size, borderRadius: 14, backgroundColor: dark && background === C.paleMint ? DARK.paleMint : dark && background === C.bg ? DARK.bg : background, justifyContent: "center", alignItems: "center" }}><Ionicons name={name} size={19} color={dark && color === C.limeDark ? DARK.limeDark : color} /></View>;
 }
 
 export function Divider() {
-  return <View style={styles.divider} />;
+  const { colorScheme } = useThemeContext();
+  const dark = colorScheme === "dark";
+  return <View style={[styles.divider, dark && { backgroundColor: DARK.line }]} />;
 }
 
 const styles = StyleSheet.create({
