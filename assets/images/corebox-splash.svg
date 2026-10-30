@@ -1,17 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#04110D"/>
-<defs>
- <linearGradient id="hex" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A6FF67"/><stop offset=".5" stop-color="#00E88B"/><stop offset="1" stop-color="#00C9D8"/></linearGradient>
- <linearGradient id="top" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#E0FF83"/><stop offset="1" stop-color="#9CFF65"/></linearGradient>
- <linearGradient id="left" x1="0" y1="0" x2=".2" y2="1"><stop stop-color="#00F09A"/><stop offset="1" stop-color="#00C98C"/></linearGradient>
- <linearGradient id="right" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00D7C1"/><stop offset="1" stop-color="#008F9B"/></linearGradient>
- <linearGradient id="orbit" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#00DFA0"/><stop offset=".5" stop-color="#B5FF63"/><stop offset="1" stop-color="#00D8E0"/></linearGradient>
- <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-</defs>
-<path d="M512 145 824 325 824 685 512 865 200 685 200 325Z M512 220 265 363 265 647 512 790 759 647 759 363Z" fill="url(#hex)" fill-rule="evenodd"/>
-<path d="M185 590 C255 340 675 245 840 390 C940 480 770 720 500 790 C300 840 150 760 185 590Z" fill="none" stroke="#00EFA0" stroke-width="26" opacity=".32" filter="url(#glow)"/>
-<path d="M185 590 C255 340 675 245 840 390 C940 480 770 720 500 790 C300 840 150 760 185 590Z" fill="none" stroke="url(#orbit)" stroke-width="18" stroke-linecap="round"/>
-<path d="M512 300 700 408 512 516 324 408Z" fill="url(#top)" stroke="#06251D" stroke-width="13" stroke-linejoin="round"/>
-<path d="M324 408 512 516 512 740 324 632Z" fill="url(#left)" stroke="#06251D" stroke-width="13" stroke-linejoin="round"/>
-<path d="M700 408 512 516 512 740 700 632Z" fill="url(#right)" stroke="#06251D" stroke-width="13" stroke-linejoin="round"/>
-<path d="M250 690 C385 770 635 720 795 570" fill="none" stroke="#B7FF70" stroke-width="12" stroke-linecap="round" opacity=".95"/>
-<text x="512" y="950" font-family="Arial,sans-serif" font-size="58" font-weight="700" text-anchor="middle" fill="#E7FFF2">COREBOX</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#FFFFFF"/><defs>
+ <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A8F45B"/><stop offset=".48" stop-color="#00DFA2"/><stop offset="1" stop-color="#00BFE8"/></linearGradient>
+ <linearGradient id="top" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#D5FF73"/><stop offset="1" stop-color="#A7F66B"/></linearGradient>
+ <linearGradient id="left" x1="0" y1="0" x2=".15" y2="1"><stop stop-color="#00E9A1"/><stop offset="1" stop-color="#00CDB5"/></linearGradient>
+ <linearGradient id="right" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00D4C8"/><stop offset="1" stop-color="#00A9D8"/></linearGradient>
+</defs><g transform="translate(512 512) scale(.72) translate(-512 -512)">
+ <path d="M512 150 820 328 820 684 512 862 204 684 204 328Z M512 226 270 366 270 646 512 786 754 646 754 366Z" fill="url(#frame)" fill-rule="evenodd"/>
+ <path d="M512 300 700 408 512 516 324 408Z" fill="url(#top)"/>
+ <path d="M324 408 512 516 512 740 324 632Z" fill="url(#left)"/>
+ <path d="M700 408 512 516 512 740 700 632Z" fill="url(#right)"/>
+</g></svg>
