@@ -5,7 +5,7 @@
  <linearGradient id="left"><stop stop-color="#00E88B"/><stop offset="1" stop-color="#00D18C"/></linearGradient>
  <linearGradient id="right"><stop stop-color="#00B6A8"/><stop offset="1" stop-color="#009E9B"/></linearGradient>
 </defs>
-<g transform="translate(204.8 204.8) scale(.60)">
+<g transform="translate(143.36 143.36) scale(.72)">
  <path d="M512 70 950 322 950 702 512 954 74 702 74 322Z M512 140 135 357 135 667 512 884 889 667 889 357Z" fill="url(#ring)" fill-rule="evenodd"/>
  <path d="M512 275 738 405 512 535 286 405Z" fill="url(#top)" stroke="#050908" stroke-width="14" stroke-linejoin="round"/>
  <path d="M286 405 512 535 512 805 286 675Z" fill="url(#left)" stroke="#050908" stroke-width="14" stroke-linejoin="round"/>
