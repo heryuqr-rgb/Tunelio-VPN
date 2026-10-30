@@ -1,15 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
 <defs>
- <linearGradient id="hex" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#65F56F"/><stop offset=".52" stop-color="#00DE83"/><stop offset="1" stop-color="#00C9D0"/></linearGradient>
+ <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#65F56F"/><stop offset=".52" stop-color="#00DE83"/><stop offset="1" stop-color="#00C9D0"/></linearGradient>
  <linearGradient id="top" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#D2FF79"/><stop offset="1" stop-color="#A7F66B"/></linearGradient>
  <linearGradient id="left" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00E88B"/><stop offset="1" stop-color="#00D18C"/></linearGradient>
  <linearGradient id="right" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00B6A8"/><stop offset="1" stop-color="#009E9B"/></linearGradient>
 </defs>
-<rect width="1024" height="1024" rx="150" fill="#030807"/>
-<g transform="translate(143.36 143.36) scale(0.72)">
-<path d="M512 0 1000 280 1000 744 512 1024 24 744 24 280Z M512 76 154 282 154 742 512 948 870 742 870 282Z" fill="url(#hex)" fill-rule="evenodd"/>
-<path d="M512 230 744 364 512 498 280 364Z" fill="url(#top)" stroke="#030807" stroke-width="12" stroke-linejoin="round"/>
-<path d="M280 364 512 498 512 782 280 648Z" fill="url(#left)" stroke="#030807" stroke-width="12" stroke-linejoin="round"/>
-<path d="M744 364 512 498 512 782 744 648Z" fill="url(#right)" stroke="#030807" stroke-width="12" stroke-linejoin="round"/>
-</g>
-</svg>
+<rect width="1024" height="1024" rx="220" fill="#050908"/>
+<g transform="translate(204.8 204.8) scale(.60)">
+ <path d="M512 70 950 322 950 702 512 954 74 702 74 322Z M512 140 135 357 135 667 512 884 889 667 889 357Z" fill="url(#ring)" fill-rule="evenodd"/>
+ <path d="M512 275 738 405 512 535 286 405Z" fill="url(#top)" stroke="#050908" stroke-width="14" stroke-linejoin="round"/>
+ <path d="M286 405 512 535 512 805 286 675Z" fill="url(#left)" stroke="#050908" stroke-width="14" stroke-linejoin="round"/>
+ <path d="M738 405 512 535 512 805 738 675Z" fill="url(#right)" stroke="#050908" stroke-width="14" stroke-linejoin="round"/>
+</g></svg>
