@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect width="1024" height="1024" fill="#050B0A"/><g transform="translate(120 30) scale(.76)"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#B8FF72"/><stop offset=".48" stop-color="#00E676"/><stop offset="1" stop-color="#00D1FF"/></linearGradient></defs><path d="M512 120 810 292 810 640 512 812 214 640 214 292Z M512 205 287 335 287 597 512 727 737 597 737 335Z" fill="url(#g)" fill-rule="evenodd"/><path d="M512 282 670 373 512 464 354 373Z" fill="#B8FF72"/><path d="M354 373 512 464 512 650 354 559Z" fill="#00E676"/><path d="M670 373 512 464 512 650 670 559Z" fill="#00AFA3"/><path d="M512 282 670 373 512 464 354 373Z" fill="none" stroke="#050B0A" stroke-width="18" stroke-linejoin="round"/><path d="M354 373 512 464 512 650 354 559Z M670 373 512 464 512 650 670 559Z" fill="none" stroke="#050B0A" stroke-width="18" stroke-linejoin="round"/></g><text x="512" y="850" font-family="Arial,sans-serif" font-size="112" font-weight="700" text-anchor="middle" fill="#FFFFFF">Core<tspan fill="#00E676">Box</tspan></text><text x="512" y="918" font-family="Arial,sans-serif" font-size="28" letter-spacing="12" text-anchor="middle" fill="#9ADFD1">PRIVACY · SPEED · FREEDOM</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#04110D"/>
+<defs>
+ <linearGradient id="hex" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A6FF67"/><stop offset=".5" stop-color="#00E88B"/><stop offset="1" stop-color="#00C9D8"/></linearGradient>
+ <linearGradient id="top" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#E0FF83"/><stop offset="1" stop-color="#9CFF65"/></linearGradient>
+ <linearGradient id="left" x1="0" y1="0" x2=".2" y2="1"><stop stop-color="#00F09A"/><stop offset="1" stop-color="#00C98C"/></linearGradient>
+ <linearGradient id="right" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#00D7C1"/><stop offset="1" stop-color="#008F9B"/></linearGradient>
+ <linearGradient id="orbit" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#00DFA0"/><stop offset=".5" stop-color="#B5FF63"/><stop offset="1" stop-color="#00D8E0"/></linearGradient>
+ <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<path d="M512 145 824 325 824 685 512 865 200 685 200 325Z M512 220 265 363 265 647 512 790 759 647 759 363Z" fill="url(#hex)" fill-rule="evenodd"/>
+<path d="M185 590 C255 340 675 245 840 390 C940 480 770 720 500 790 C300 840 150 760 185 590Z" fill="none" stroke="#00EFA0" stroke-width="26" opacity=".32" filter="url(#glow)"/>
+<path d="M185 590 C255 340 675 245 840 390 C940 480 770 720 500 790 C300 840 150 760 185 590Z" fill="none" stroke="url(#orbit)" stroke-width="18" stroke-linecap="round"/>
+<path d="M512 300 700 408 512 516 324 408Z" fill="url(#top)" stroke="#06251D" stroke-width="13" stroke-linejoin="round"/>
+<path d="M324 408 512 516 512 740 324 632Z" fill="url(#left)" stroke="#06251D" stroke-width="13" stroke-linejoin="round"/>
+<path d="M700 408 512 516 512 740 700 632Z" fill="url(#right)" stroke="#06251D" stroke-width="13" stroke-linejoin="round"/>
+<path d="M250 690 C385 770 635 720 795 570" fill="none" stroke="#B7FF70" stroke-width="12" stroke-linecap="round" opacity=".95"/>
+<text x="512" y="950" font-family="Arial,sans-serif" font-size="58" font-weight="700" text-anchor="middle" fill="#E7FFF2">COREBOX</text></svg>
