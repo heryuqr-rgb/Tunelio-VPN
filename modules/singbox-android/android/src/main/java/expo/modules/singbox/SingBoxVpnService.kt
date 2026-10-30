@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import org.json.JSONObject
@@ -46,6 +47,9 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
     private var worker: Future<*>? = null
     @Volatile private var activeConfigPath: String? = null
     @Volatile private var lastCacheFilePath: String? = null
+    @Volatile private var lastTrafficSampleAt = 0L
+    @Volatile private var lastUploadBytes = -1L
+    @Volatile private var lastDownloadBytes = -1L
 
     override fun onCreate() {
         super.onCreate()
@@ -131,6 +135,9 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
                 if (sessionGeneration.get() != generation || stopping.get()) false
                 else {
                     sessionStartedAt = System.currentTimeMillis()
+                    lastTrafficSampleAt = 0L
+                    lastUploadBytes = -1L
+                    lastDownloadBytes = -1L
                     tunnelConnected = true
                     SingBoxBridge.emitStatus(this, "connected", "Tunnel TUN sing-box aktif.", sessionStartedAt)
                     true
@@ -288,7 +295,19 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
                 val download = message.downlinkTotal.coerceAtLeast(0L)
                 SingBoxBridge.emitTraffic(this@SingBoxVpnService, upload, download, message.trafficAvailable)
                 if (!stopping.get() && message.trafficAvailable) {
-                    updateNotification("↑ ${formatTraffic(upload)}  ·  ↓ ${formatTraffic(download)}")
+                    val now = SystemClock.elapsedRealtime()
+                    val previousAt = lastTrafficSampleAt
+                    val elapsedMs = if (previousAt > 0L) (now - previousAt).coerceAtLeast(1L) else 0L
+                    val uploadSpeed = if (lastUploadBytes >= 0L && elapsedMs > 0L) {
+                        ((upload - lastUploadBytes).coerceAtLeast(0L) * 1000L) / elapsedMs
+                    } else 0L
+                    val downloadSpeed = if (lastDownloadBytes >= 0L && elapsedMs > 0L) {
+                        ((download - lastDownloadBytes).coerceAtLeast(0L) * 1000L) / elapsedMs
+                    } else 0L
+                    lastTrafficSampleAt = now
+                    lastUploadBytes = upload
+                    lastDownloadBytes = download
+                    updateNotification("↓ ${formatSpeed(downloadSpeed)}  ·  ↑ ${formatSpeed(uploadSpeed)}")
                 }
             }
             override fun writeGroups(message: OutboundGroupIterator?) = Unit
@@ -417,9 +436,9 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(text))
     }
 
-    private fun formatTraffic(bytes: Long): String {
-        if (bytes < 1024L) return "$bytes B"
-        val units = arrayOf("KB", "MB", "GB", "TB")
+    private fun formatSpeed(bytesPerSecond: Long): String {
+        if (bytesPerSecond < 1024L) return "$bytesPerSecond B/s"
+        val units = arrayOf("KB/s", "MB/s", "GB/s", "TB/s")
         var value = bytes.toDouble()
         var unit = -1
         do {
@@ -438,6 +457,13 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
             PendingIntent.getActivity(this, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this)
+        val disconnectIntent = Intent(this, SingBoxVpnService::class.java).setAction(SingBoxBridge.ACTION_STOP)
+        val disconnectPendingIntent = PendingIntent.getService(
+            this,
+            1,
+            disconnectIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         return builder
             .setSmallIcon(R.drawable.ic_stat_tunelio)
             .setContentTitle("CoreBox VPN")
@@ -446,6 +472,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
+            .addAction(android.R.drawable.ic_media_pause, "Disconnect", disconnectPendingIntent)
             .build()
     }
 
