@@ -439,7 +439,7 @@ class SingBoxVpnService : VpnService(), CommandServerHandler {
     private fun formatSpeed(bytesPerSecond: Long): String {
         if (bytesPerSecond < 1024L) return "$bytesPerSecond B/s"
         val units = arrayOf("KB/s", "MB/s", "GB/s", "TB/s")
-        var value = bytes.toDouble()
+        var value = bytesPerSecond.toDouble()
         var unit = -1
         do {
             value /= 1024.0
